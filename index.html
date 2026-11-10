@@ -42,11 +42,18 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased pb-20">
 
+    <!-- PANTALLA DE CARGA / ACTUALIZACIÓN CON EMBLEMA -->
+    <div id="loading-screen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center space-y-3 transition-opacity duration-500">
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEUAv4T3qUa4AAAACXBIWXMAAA7DAAAOwwHHb6hkAAACR0lEQVR4nO2YMW7DMBCG7aJcOHEB2s54hLp3yE7pA1S1XbKnlC1A1cOENh8j1xQunZ3p8W9B0uE2SvwfDki/Z0eC3Q+n68X/Lw1E4B8M9wE0K+WkF8g244c4X/0F6H5w2S4p0K8QG0X3J4cAvw9A/yN33A3wE19A8i/F9wHkO8vEPF1jAHm1n0fE/7+E8J8HSA7gCg4gM/7w4Bq8w8F0n1C0n7HACr8bY4J9g01r2D+3gDk1n9jC7A3kC53wL2/AHXbX/7vF0f8h9m5R6v7a88P6vBwLpB4b+9A5A7v2B0A/48e8V0B7M289aAfe0HqLwPz8C59gN/nU48A3Kz+2e9H2AHgCvv+9g/m3B7B34J21+8G8A1B2N82Oevg60F0pLsfqj6+7C14f/2n8B9Lp3C8Cfe+3gD2P8B8b99u1Yg35/nFz+3N83u3E+A0C3N7t8x+kH9L/H4D6j6d+bA064D3vM9Z7v+62gHz194z+rA3N/2B0I/2h/3e83n35+8D3H6z589w/D339f4M9A6L/wAAAABJRU5ErkJggg==" id="splash-logo" class="w-24 h-24 object-contain animate-pulse" alt="Vida Nueva">
+        <p class="text-xs font-bold text-[#004B87] uppercase tracking-widest">Iglesia Cristiana Vida Nueva</p>
+        <p class="text-[10px] text-gray-400">Actualizando información...</p>
+    </div>
+
     <!-- HEADER -->
-    <header class="bg-white shadow-md border-b-4 border-[#E31B23] sticky top-0 z-50">
+    <header class="bg-white shadow-md border-b-4 border-[#E31B23] sticky top-0 z-40">
         <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center">
             <div class="flex items-center space-x-3">
-                <div class="bg-[#004B87] text-white font-black px-3 py-1 rounded-lg text-xl tracking-wider">VN</div>
+                <img src="" class="w-10 h-10 object-contain church-emblem-logo" alt="Logo">
                 <div>
                     <h1 class="text-xl font-extrabold tracking-wide"><span class="text-[#E31B23]">VIDA</span><span class="text-[#004B87]">NUEVA</span></h1>
                     <p class="text-xs text-gray-500 uppercase tracking-widest font-semibold">Iglesia Cristiana — Sistema de Tesorería</p>
@@ -439,11 +446,17 @@
     <!-- CONTENEDOR OCULTO RECIBO PNG -->
     <div id="recibo-preview-container" class="absolute -top-[9999px] left-0"></div>
 
-    <!-- IMAGEN OCULTA DEL LOGO PARA INCRUSTAR EN EL PDF -->
-    <img id="logo-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" class="hidden" crossorigin="anonymous" />
+    <!-- IMAGEN OFICIAL DEL LOGO EMBLEMA (BASE64) -->
+    <img id="logo-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEUAv4T3qUa4AAAACXBIWXMAAA7DAAAOwwHHb6hkAAACR0lEQVR4nO2YMW7DMBCG7aJcOHEB2s54hLp3yE7pA1S1XbKnlC1A1cOENh8j1xQunZ3p8W9B0uE2SvwfDki/Z0eC3Q+n68X/Lw1E4B8M9wE0K+WkF8g244c4X/0F6H5w2S4p0K8QG0X3J4cAvw9A/yN33A3wE19A8i/F9wHkO8vEPF1jAHm1n0fE/7+E8J8HSA7gCg4gM/7w4Bq8w@F0n1C0n7HACr8bY4J9g01r2D+3gDk1n9jC7A3kC53wL2/AHXbX/7vF0f8h9m5R6v7a88P6vBwLpB4b+9A5A7v2B0A/48e8V0B7M289aAfe0HqLwPz8C59gN/nU48A3Kz+2e9H2AHgCvv+9g/m3B7B34J21+8G8A1B2N82Oevg60F0pLsfqj6+7C14f/2n8B9Lp3C8Cfe+3gD2P8B8b99u1Yg35/nFz+3N83u3E+A0C3N7t8x+kH9L/H4D6j6d+bA064D3vM9Z7v+62gHz194z+rA3N/2B0I/2h/3e83n35+8D3H6z589w/D339f4M9A6L/wAAAABJRU5ErkJggg==" class="hidden" crossorigin="anonymous" />
 
     <script>
         lucide.createIcons();
+
+        // Cargar logo oficial en las etiquetas con clase .church-emblem-logo
+        const logoDataUri = document.getElementById('logo-img').src;
+        document.querySelectorAll('.church-emblem-logo').forEach(img => {
+            img.src = logoDataUri;
+        });
 
         let responsablesList = JSON.parse(localStorage.getItem('vn_responsables')) || ["Hermano Pastor", "Hna. María Pérez", "Diác. Carlos Gómez"];
         let denominacionesUsd = [1, 2, 5, 10, 20, 50, 100];
@@ -475,6 +488,12 @@
                         movimientosGlobales.push({ id: doc.id, ...doc.data() });
                     });
                     renderHistoricoYBalos();
+                    // Ocultar pantalla de carga cuando carguen los datos
+                    const loader = document.getElementById('loading-screen');
+                    if(loader) {
+                        loader.style.opacity = '0';
+                        setTimeout(() => loader.style.display = 'none', 500);
+                    }
                 }, (error) => {
                     console.error("Error al sincronizar Firestore:", error);
                 });
@@ -657,7 +676,7 @@
             }
         }
 
-        // REINICIAR FÁBRICA (ELIMINAR TODO EL HISTÓRICO Y RESPONSABLES)
+        // REINICIAR FÁBRICA
         async function ejecutarReiniciarFabrica() {
             try {
                 if(window.db && window.FB) {
@@ -788,17 +807,21 @@
             }
         }
 
-        // GENERAR RECIBO PNG (INGRESOS Y EGRESOS)
+        // GENERAR RECIBO PNG CON EMBLEMA
         function generarImagenRecibo(item) {
             const container = document.getElementById('recibo-preview-container');
             const titulo = item.type === 'income' ? 'RECEPCIÓN DE OFRENDAS' : 'COMPROBANTE DE EGRESO';
+            const logoSrc = document.getElementById('logo-img').src;
             
             container.innerHTML = `
                 <div id="recibo-canvas" style="width: 600px; padding: 30px; background: #ffffff; font-family: sans-serif; color: #333; border: 4px solid #004B87;">
-                    <div style="text-align: center; border-bottom: 2px solid #E31B23; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h2 style="margin: 0; color: #E31B23; font-size: 24px; font-weight: 900;">VIDA NUEVA</h2>
-                        <p style="margin: 2px 0; color: #004B87; font-size: 12px; font-weight: bold; text-transform: uppercase;">Iglesia Cristiana — Tesorería</p>
-                        <h3 style="margin: 10px 0 0 0; color: #333; font-size: 16px;">${titulo}</h3>
+                    <div style="display: flex; align-items: center; border-bottom: 2px solid #E31B23; padding-bottom: 15px; margin-bottom: 20px;">
+                        <img src="${logoSrc}" style="width: 50px; height: 50px; object-fit: contain; margin-right: 15px;" />
+                        <div style="flex: 1; text-align: center;">
+                            <h2 style="margin: 0; color: #E31B23; font-size: 22px; font-weight: 900;">VIDA NUEVA</h2>
+                            <p style="margin: 2px 0; color: #004B87; font-size: 11px; font-weight: bold; text-transform: uppercase;">Iglesia Cristiana — Tesorería</p>
+                            <h3 style="margin: 5px 0 0 0; color: #333; font-size: 15px;">${titulo}</h3>
+                        </div>
                     </div>
                     <div style="font-size: 13px; margin-bottom: 15px; display: flex; justify-content: space-between;">
                         <div><strong>N° Recibo:</strong> ${item.correlative}</div>
@@ -845,15 +868,20 @@
             });
         }
 
-        // GENERAR RECIBO PNG CAMBIARIA
+        // GENERAR RECIBO PNG CAMBIARIA CON EMBLEMA
         function generarImagenReciboCambio(item) {
             const container = document.getElementById('recibo-preview-container');
+            const logoSrc = document.getElementById('logo-img').src;
+
             container.innerHTML = `
                 <div id="recibo-canvas" style="width: 600px; padding: 30px; background: #ffffff; font-family: sans-serif; color: #333; border: 4px solid #004B87;">
-                    <div style="text-align: center; border-bottom: 2px solid #E31B23; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h2 style="margin: 0; color: #E31B23; font-size: 24px; font-weight: 900;">VIDA NUEVA</h2>
-                        <p style="margin: 2px 0; color: #004B87; font-size: 12px; font-weight: bold; text-transform: uppercase;">Iglesia Cristiana — Tesorería</p>
-                        <h3 style="margin: 10px 0 0 0; color: #333; font-size: 16px;">COMPROBANTE DE OPERACIÓN CAMBIARIA</h3>
+                    <div style="display: flex; align-items: center; border-bottom: 2px solid #E31B23; padding-bottom: 15px; margin-bottom: 20px;">
+                        <img src="${logoSrc}" style="width: 50px; height: 50px; object-fit: contain; margin-right: 15px;" />
+                        <div style="flex: 1; text-align: center;">
+                            <h2 style="margin: 0; color: #E31B23; font-size: 22px; font-weight: 900;">VIDA NUEVA</h2>
+                            <p style="margin: 2px 0; color: #004B87; font-size: 11px; font-weight: bold; text-transform: uppercase;">Iglesia Cristiana — Tesorería</p>
+                            <h3 style="margin: 5px 0 0 0; color: #333; font-size: 15px;">COMPROBANTE DE OPERACIÓN CAMBIARIA</h3>
+                        </div>
                     </div>
                     <div style="font-size: 13px; margin-bottom: 15px; display: flex; justify-content: space-between;">
                         <div><strong>N° Operación:</strong> ${item.correlative}</div>
@@ -896,7 +924,7 @@
             });
         }
 
-        // HISTÓRICO Y SALDOS
+        // HISTÓRICO Y SALDOS CON ELIMINACIÓN PROTEGIDA
         function renderHistoricoYBalos() {
             let saldoUsd = 0;
             let saldoBsEfec = 0;
@@ -943,7 +971,7 @@
                             ${signo} ${montoTexto}
                         </td>
                         <td class="p-2 text-center">
-                            <button onclick="solicitarClaveParaAccion(async () => { await window.FB.deleteDoc(window.FB.doc(window.db, 'movements', '${item.id}')); alert('Eliminado del histórico y saldos recalculados.'); })" class="text-red-600 underline font-bold cursor-pointer">Eliminar con Clave</button>
+                            <button onclick="solicitarClaveParaAccion(async () => { await window.FB.deleteDoc(window.FB.doc(window.db, 'movements', '${item.id}')); alert('Eliminado del histórico y saldos actualizados.'); })" class="text-red-600 underline font-bold cursor-pointer">Eliminar con Clave</button>
                         </td>
                     </tr>
                 `;
@@ -959,7 +987,7 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // Agregar Logo / Emblema
+            // Agregar Emblema al PDF
             const logoImg = document.getElementById('logo-img');
             if(logoImg && logoImg.src) {
                 try {
