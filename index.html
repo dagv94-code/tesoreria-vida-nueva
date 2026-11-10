@@ -299,7 +299,7 @@
                     </div>
                     <button type="submit" class="w-full bg-[#004B87] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-900 transition flex items-center justify-center space-x-2 text-lg">
                         <i data-lucide="check-circle" class="w-6 h-6"></i>
-                        <span>EJECUTAR OPERACIÓN CAMBIARIA</span>
+                        <span>EJECUTAR OPERACIÓN CAMBIARIA Y RECIBO</span>
                     </button>
                 </form>
             </div>
@@ -572,7 +572,7 @@
                 container.innerHTML += `
                     <div class="flex justify-between items-center p-2 bg-gray-50 border rounded-lg text-sm">
                         <span>${r}</span>
-                        <button onclick="solicitarClaveParaAccion(() => { responsablesList.splice(${idx},1); actualizarSelectsResponsables(); renderResponsablesList(); })" class="text-red-600 underline font-bold text-xs">Eliminar</button>
+                        <button onclick="solicitarClaveParaAccion(() => { responsablesList.splice(${idx},1); actualizarSelectsResponsables(); renderResponsablesList(); })" class="text-red-600 underline font-bold text-xs cursor-pointer">Eliminar</button>
                     </div>
                 `;
             });
@@ -707,16 +707,21 @@
             const resp = document.getElementById('cam-responsible').value;
             if(!resp) { alert('Seleccione responsable.'); return; }
 
+            const debitAmt = parseFloat(document.getElementById('cam-debit-amount').value) || 0;
+            const creditAmt = parseFloat(document.getElementById('cam-credit-amount').value) || 0;
+            const debitAcc = document.getElementById('cam-debit-account').value;
+            const creditAcc = document.getElementById('cam-credit-account').value;
+
             const data = {
                 type: 'exchange',
                 correlative: 'CAM-' + Math.floor(1000 + Math.random() * 9000),
                 date: document.getElementById('cam-date').value,
                 category: 'Operación cambiaria',
-                detail: document.getElementById('cam-comment').value || 'Cambio de divisas',
-                debitAccount: document.getElementById('cam-debit-account').value,
-                debitAmount: parseFloat(document.getElementById('cam-debit-amount').value) || 0,
-                creditAccount: document.getElementById('cam-credit-account').value,
-                creditAmount: parseFloat(document.getElementById('cam-credit-amount').value) || 0,
+                detail: document.getElementById('cam-comment').value || 'Compra / Venta de divisas',
+                debitAccount: debitAcc,
+                debitAmount: debitAmt,
+                creditAccount: creditAcc,
+                creditAmount: creditAmt,
                 responsible: resp,
                 createdAt: new Date().toISOString()
             };
@@ -725,7 +730,8 @@
                 if(window.db && window.FB) {
                     await window.FB.addDoc(window.FB.collection(window.db, "movements"), data);
                 }
-                alert('¡Operación cambiaria ejecutada con éxito!');
+                generarImagenReciboCambio(data);
+                alert('¡Operación cambiaria ejecutada y recibo generado!');
                 document.getElementById('form-cambio').reset();
                 document.getElementById('cam-date').value = new Date().toISOString().split('T')[0];
             } catch(e) {
@@ -734,7 +740,7 @@
             }
         }
 
-        // GENERAR RECIBO PNG
+        // GENERAR RECIBO PNG (INGRESOS Y EGRESOS)
         function generarImagenRecibo(item) {
             const container = document.getElementById('recibo-preview-container');
             const titulo = item.type === 'income' ? 'RECEPCIÓN DE OFRENDAS' : 'COMPROBANTE DE EGRESO';
@@ -791,7 +797,58 @@
             });
         }
 
-        // HISTÓRICO Y SALDOS
+        // GENERAR RECIBO PNG CAMBIARIA
+        function generarImagenReciboCambio(item) {
+            const container = document.getElementById('recibo-preview-container');
+            container.innerHTML = `
+                <div id="recibo-canvas" style="width: 600px; padding: 30px; background: #ffffff; font-family: sans-serif; color: #333; border: 4px solid #004B87;">
+                    <div style="text-align: center; border-bottom: 2px solid #E31B23; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h2 style="margin: 0; color: #E31B23; font-size: 24px; font-weight: 900;">VIDA NUEVA</h2>
+                        <p style="margin: 2px 0; color: #004B87; font-size: 12px; font-weight: bold; text-transform: uppercase;">Iglesia Cristiana — Tesorería</p>
+                        <h3 style="margin: 10px 0 0 0; color: #333; font-size: 16px;">COMPROBANTE DE OPERACIÓN CAMBIARIA</h3>
+                    </div>
+                    <div style="font-size: 13px; margin-bottom: 15px; display: flex; justify-content: space-between;">
+                        <div><strong>N° Operación:</strong> ${item.correlative}</div>
+                        <div><strong>Fecha:</strong> ${item.date}</div>
+                    </div>
+                    <div style="font-size: 13px; margin-bottom: 15px;">
+                        <strong>Observación:</strong> ${item.detail}
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
+                        <thead>
+                            <tr style="background: #004B87; color: white;">
+                                <th style="padding: 8px; text-align: left;">Detalle del Cambio</th>
+                                <th style="padding: 8px; text-align: right;">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid #ddd;">
+                                <td style="padding: 8px; color: #E31B23; font-weight: bold;">SE DEBITA (SALE) (${item.debitAccount})</td>
+                                <td style="padding: 8px; text-align: right; font-weight: bold;">${item.debitAmount.toLocaleString('es-VE', {minimumFractionDigits: 2})}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #ddd;">
+                                <td style="padding: 8px; color: #004B87; font-weight: bold;">SE ACREDITA (ENTRA) (${item.creditAccount})</td>
+                                <td style="padding: 8px; text-align: right; font-weight: bold;">${item.creditAmount.toLocaleString('es-VE', {minimumFractionDigits: 2})}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="font-size: 12px; margin-top: 30px; display: flex; justify-content: space-between;">
+                        <div>Responsable: <strong>${item.responsible}</strong></div>
+                        <div>Emisión: ${new Date().toLocaleDateString()}</div>
+                    </div>
+                </div>
+            `;
+
+            html2canvas(document.getElementById('recibo-canvas')).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Recibo_Cambio_${item.correlative}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                container.innerHTML = '';
+            });
+        }
+
+        // HISTÓRICO Y SALDOS (AFECTA AUTOMÁTICAMENTE AL ELIMINAR)
         function renderHistoricoYBalos() {
             let saldoUsd = 0;
             let saldoBsEfec = 0;
@@ -822,19 +879,23 @@
                 const badgeColor = item.type === 'income' ? 'text-green-600 font-bold' : (item.type === 'expense' ? 'text-red-600 font-bold' : 'text-blue-600 font-bold');
                 const signo = item.type === 'income' ? '+' : (item.type === 'expense' ? '-' : '⇄');
 
+                let montoTexto = '';
+                if(item.type === 'exchange') {
+                    montoTexto = `${item.debitAmount} ${item.debitAccount} ➔ ${item.creditAmount} ${item.creditAccount}`;
+                } else {
+                    montoTexto = `${item.usd ? item.usd.toLocaleString() + ' $' : ''} ${item.bs_efectivo ? item.bs_efectivo.toLocaleString() + ' Bs' : ''} ${item.bs_transf ? item.bs_transf.toLocaleString() + ' Bs (Tr)' : ''}`;
+                }
+
                 tbody.innerHTML += `
                     <tr class="border-b hover:bg-gray-50 text-xs">
                         <td class="p-2">${item.date}<br><span class="font-bold text-[#004B87]">${item.correlative || 'MOV'}</span></td>
                         <td class="p-2"><strong>${item.category}</strong><br>${item.detail || item.giver || ''}</td>
                         <td class="p-2">${item.responsible}</td>
                         <td class="p-2 text-right ${badgeColor}">
-                            ${signo} ${item.usd ? item.usd.toLocaleString() + ' $' : ''} 
-                            ${item.bs_efectivo ? item.bs_efectivo.toLocaleString() + ' Bs' : ''}
-                            ${item.bs_transf ? item.bs_transf.toLocaleString() + ' Bs (Tr)' : ''}
-                            ${item.type === 'exchange' ? item.debitAmount + ' ' + item.debitAccount + ' ➔ ' + item.creditAmount + ' ' + item.creditAccount : ''}
+                            ${signo} ${montoTexto}
                         </td>
                         <td class="p-2 text-center">
-                            <button onclick="solicitarClaveParaAccion(async () => { await window.FB.deleteDoc(window.FB.doc(window.db, 'movements', '${item.id}')); alert('Eliminado.'); })" class="text-red-600 underline font-bold">Eliminar</button>
+                            <button onclick="solicitarClaveParaAccion(async () => { await window.FB.deleteDoc(window.FB.doc(window.db, 'movements', '${item.id}')); alert('Movimiento eliminado y saldos actualizados.'); })" class="text-red-600 underline font-bold cursor-pointer">Eliminar</button>
                         </td>
                     </tr>
                 `;
