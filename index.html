@@ -31,8 +31,6 @@
 
         const app = initializeApp(firebaseConfig);
         window.db = getFirestore(app);
-        
-        // Exponer funciones de Firestore globalmente para la app
         window.FB = { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy };
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -41,17 +39,10 @@
             inicializarAppFirestore();
         });
     </script>
-
-    <style>
-        .brand-red { color: #E31B23; }
-        .bg-brand-red { background-color: #E31B23; }
-        .brand-blue { color: #004B87; }
-        .bg-brand-blue { background-color: #004B87; }
-    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased pb-20">
 
-    <!-- HEADER / ENCABEZADO OFICIAL -->
+    <!-- HEADER -->
     <header class="bg-white shadow-md border-b-4 border-[#E31B23] sticky top-0 z-50">
         <div class="max-w-4xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center">
             <div class="flex items-center space-x-3">
@@ -66,7 +57,7 @@
                 <span id="status-text">Conectando...</span>
             </div>
         </div>
-        <!-- MENÚ DE PESTAÑAS NAVEGABLE -->
+        <!-- MENÚ -->
         <nav class="bg-[#004B87] text-white shadow-inner overflow-x-auto">
             <div class="max-w-4xl mx-auto flex whitespace-nowrap px-2">
                 <button onclick="switchTab('ingresos')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-yellow-400 bg-blue-900 transition flex items-center space-x-1" data-target="ingresos">
@@ -94,7 +85,7 @@
         </nav>
     </header>
 
-    <!-- CONTENEDOR PRINCIPAL DE VISTAS -->
+    <!-- CONTENEDOR PRINCIPAL -->
     <main class="max-w-4xl mx-auto p-4 mt-2">
 
         <!-- PESTAÑA 1: INGRESOS -->
@@ -333,7 +324,7 @@
             <div class="bg-white p-6 rounded-xl shadow-md border">
                 <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center justify-between">
                     <span>Histórico de Movimientos y Estado de Cuenta</span>
-                    <button onclick="cargarMovimientos()" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 font-semibold">Actualizar</button>
+                    <button onclick="renderHistoricoYBalos()" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 font-semibold">Actualizar</button>
                 </h2>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse text-sm">
@@ -342,12 +333,12 @@
                                 <th class="p-2">Fecha / Recibo</th>
                                 <th class="p-2">Tipo / Detalle</th>
                                 <th class="p-2">Responsable</th>
-                                <th class="p-2 text-right">Entrada / Salida</th>
+                                <th class="p-2 text-right">Monto / Movimiento</th>
                                 <th class="p-2 text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="movements-table-body">
-                            <!-- Datos dinámicos desde Firestore -->
+                            <!-- Dinámico -->
                         </tbody>
                     </table>
                 </div>
@@ -384,7 +375,7 @@
             </div>
         </section>
 
-        <!-- PESTAÑA 7: AJUSTES (PROTEGIDA) -->
+        <!-- PESTAÑA 7: AJUSTES -->
         <section id="view-ajustes" class="hidden space-y-6">
             <div class="bg-white p-6 rounded-xl shadow-md border">
                 <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center space-x-2 border-b pb-2">
@@ -413,7 +404,7 @@
 
     </main>
 
-    <!-- MODAL DE CLAVE MAESTRA UNIVERSAL -->
+    <!-- MODAL DE CLAVE MAESTRA -->
     <div id="modal-clave" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4 text-center">
             <h3 class="font-bold text-lg text-[#004B87]">Se requiere Clave Maestra</h3>
@@ -426,10 +417,9 @@
         </div>
     </div>
 
-    <!-- CONTENEDOR OCULTO PARA GENERAR RECIBO PNG -->
+    <!-- CONTENEDOR OCULTO RECIBO PNG -->
     <div id="recibo-preview-container" class="absolute -top-[9999px] left-0"></div>
 
-    <!-- SCRIPT DE LÓGICA GENERAL -->
     <script>
         lucide.createIcons();
 
@@ -463,6 +453,8 @@
                         movimientosGlobales.push({ id: doc.id, ...doc.data() });
                     });
                     renderHistoricoYBalos();
+                }, (error) => {
+                    console.error("Error al sincronizar Firestore:", error);
                 });
             }
         }
@@ -481,6 +473,7 @@
 
         function poblarDenominaciones() {
             const usdContainer = document.getElementById('denoms-usd-container');
+            if(!usdContainer) return;
             usdContainer.innerHTML = '';
             denominacionesUsd.forEach(d => {
                 usdContainer.innerHTML += `
@@ -579,7 +572,7 @@
                 container.innerHTML += `
                     <div class="flex justify-between items-center p-2 bg-gray-50 border rounded-lg text-sm">
                         <span>${r}</span>
-                        <button onclick="solicitarClaveParaAccion(() => { responsablesList.splice(${idx},1); actualizarSelectsResponsables(); renderResponsablesList(); })" class="text-red-600 font-bold underline text-xs">Eliminar</button>
+                        <button onclick="solicitarClaveParaAccion(() => { responsablesList.splice(${idx},1); actualizarSelectsResponsables(); renderResponsablesList(); })" class="text-red-600 underline font-bold text-xs">Eliminar</button>
                     </div>
                 `;
             });
@@ -588,15 +581,11 @@
         function calcularTasaImplicita() {
             const debitAcc = document.getElementById('cam-debit-account').value;
             const creditAcc = document.getElementById('cam-credit-account').value;
-            const debitAmount = parseFloat(document.getElementById('cam-debit-amount').value) || 0;
-            const creditAmount = parseFloat(document.getElementById('cam-credit-amount').value) || 0;
-
+            const debitAmt = parseFloat(document.getElementById('cam-debit-amount').value) || 0;
+            const creditAmt = parseFloat(document.getElementById('cam-credit-amount').value) || 0;
             let tasa = 0;
-            if(debitAcc === 'usd' && creditAcc.includes('bs')) {
-                tasa = creditAmount / debitAmount;
-            } else if(debitAcc.includes('bs') && creditAcc === 'usd') {
-                tasa = debitAmount / creditAmount;
-            }
+            if(debitAcc === 'usd' && creditAcc.includes('bs')) tasa = creditAmt / debitAmt;
+            else if(debitAcc.includes('bs') && creditAcc === 'usd') tasa = debitAmt / creditAmt;
             document.getElementById('tasa-implicita').innerText = (tasa || 0).toLocaleString('es-VE', {minimumFractionDigits: 2}) + ' Bs/$';
         }
 
@@ -640,22 +629,20 @@
             }
         }
 
-        // REGISTRAR INGRESOS Y GENERAR RECIBO PNG
+        // REGISTRAR INGRESO
         async function totalizarIngreso() {
             const totalD = calcularTotalDivisas();
             const totalB = calcularTotalBsEfectivo();
             const totalT = calcularTotalBsTransf();
             const resp = document.getElementById('ing-responsible').value;
-            const fecha = document.getElementById('ing-date').value;
-            const tipo = document.getElementById('ing-type').value;
 
             if(!resp) { alert('Seleccione un responsable.'); return; }
 
             const data = {
                 type: 'income',
                 correlative: 'ING-' + Math.floor(1000 + Math.random() * 9000),
-                date: fecha,
-                category: tipo,
+                date: document.getElementById('ing-date').value,
+                category: document.getElementById('ing-type').value,
                 giver: document.getElementById('ing-giver').value || '',
                 detail: document.getElementById('ing-detail').value || '',
                 usd: totalD,
@@ -671,24 +658,20 @@
                     await window.FB.addDoc(window.FB.collection(window.db, "movements"), data);
                 }
                 generarImagenRecibo(data);
-                alert('¡Ingreso registrado y recibo generado con éxito!');
+                alert('¡Ingreso guardado y recibo generado con éxito!');
                 document.getElementById('form-ingreso').reset();
                 document.getElementById('ing-date').value = new Date().toISOString().split('T')[0];
                 poblarDenominaciones();
             } catch(e) {
                 console.error(e);
-                alert('Error al guardar en la base de datos.');
+                alert('Error al guardar: ' + e.message);
             }
         }
 
-        // REGISTRAR EGRESOS
+        // REGISTRAR EGRESO
         async function totalizarEgreso() {
-            const usd = parseFloat(document.getElementById('eg-usd').value) || 0;
-            const bsEfectivo = parseFloat(document.getElementById('eg-bs-efec').value) || 0;
-            const bsTransf = parseFloat(document.getElementById('eg-bs-transf').value) || 0;
             const resp = document.getElementById('eg-responsible').value;
-
-            if(!resp) { alert('Seleccione el responsable que entrega.'); return; }
+            if(!resp) { alert('Seleccione responsable.'); return; }
 
             const data = {
                 type: 'expense',
@@ -696,9 +679,9 @@
                 date: document.getElementById('eg-date').value,
                 category: document.getElementById('eg-type').value,
                 detail: document.getElementById('eg-desc').value,
-                usd: usd,
-                bs_efectivo: bsEfectivo,
-                bs_transf: bsTransf,
+                usd: parseFloat(document.getElementById('eg-usd').value) || 0,
+                bs_efectivo: parseFloat(document.getElementById('eg-bs-efec').value) || 0,
+                bs_transf: parseFloat(document.getElementById('eg-bs-transf').value) || 0,
                 responsible: resp,
                 authorizedBy: document.getElementById('eg-auth').value || 'N/A',
                 beneficiary: document.getElementById('eg-beneficiary').value || 'N/A',
@@ -710,23 +693,18 @@
                     await window.FB.addDoc(window.FB.collection(window.db, "movements"), data);
                 }
                 generarImagenRecibo(data);
-                alert('¡Egreso registrado y comprobante generado con éxito!');
+                alert('¡Egreso registrado y comprobante generado!');
                 document.getElementById('form-egreso').reset();
                 document.getElementById('eg-date').value = new Date().toISOString().split('T')[0];
             } catch(e) {
                 console.error(e);
-                alert('Error al guardar egreso.');
+                alert('Error al guardar egreso: ' + e.message);
             }
         }
 
-        // REGISTRAR OPERACIÓN CAMBIARIA
+        // OPERACIÓN CAMBIARIA
         async function registrarCambio() {
-            const debitAcc = document.getElementById('cam-debit-account').value;
-            const creditAcc = document.getElementById('cam-credit-account').value;
-            const debitAmt = parseFloat(document.getElementById('cam-debit-amount').value) || 0;
-            const creditAmt = parseFloat(document.getElementById('cam-credit-amount').value) || 0;
             const resp = document.getElementById('cam-responsible').value;
-
             if(!resp) { alert('Seleccione responsable.'); return; }
 
             const data = {
@@ -735,10 +713,10 @@
                 date: document.getElementById('cam-date').value,
                 category: 'Operación cambiaria',
                 detail: document.getElementById('cam-comment').value || 'Cambio de divisas',
-                debitAccount: debitAcc,
-                debitAmount: debitAmt,
-                creditAccount: creditAcc,
-                creditAmount: creditAmt,
+                debitAccount: document.getElementById('cam-debit-account').value,
+                debitAmount: parseFloat(document.getElementById('cam-debit-amount').value) || 0,
+                creditAccount: document.getElementById('cam-credit-account').value,
+                creditAmount: parseFloat(document.getElementById('cam-credit-amount').value) || 0,
                 responsible: resp,
                 createdAt: new Date().toISOString()
             };
@@ -752,11 +730,11 @@
                 document.getElementById('cam-date').value = new Date().toISOString().split('T')[0];
             } catch(e) {
                 console.error(e);
-                alert('Error al registrar operación cambiaria.');
+                alert('Error al registrar cambio: ' + e.message);
             }
         }
 
-        // GENERADOR DE RECIBO PNG
+        // GENERAR RECIBO PNG
         function generarImagenRecibo(item) {
             const container = document.getElementById('recibo-preview-container');
             const titulo = item.type === 'income' ? 'RECEPCIÓN DE OFRENDAS' : 'COMPROBANTE DE EGRESO';
@@ -785,15 +763,15 @@
                         <tbody>
                             <tr style="border-bottom: 1px solid #ddd;">
                                 <td style="padding: 8px;">Divisas Efectivo ($)</td>
-                                <td style="padding: 8px; text-align: right; font-weight: bold;">${item.usd.toLocaleString('es-VE', {minimumFractionDigits: 2})} $</td>
+                                <td style="padding: 8px; text-align: right; font-weight: bold;">${(item.usd || 0).toLocaleString('es-VE', {minimumFractionDigits: 2})} $</td>
                             </tr>
                             <tr style="border-bottom: 1px solid #ddd;">
                                 <td style="padding: 8px;">Bolívares Efectivo (Bs)</td>
-                                <td style="padding: 8px; text-align: right; font-weight: bold;">${item.bs_efectivo.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
+                                <td style="padding: 8px; text-align: right; font-weight: bold;">${(item.bs_efectivo || 0).toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
                             </tr>
                             <tr style="border-bottom: 1px solid #ddd;">
                                 <td style="padding: 8px;">Bolívares Transferencia (Bs)</td>
-                                <td style="padding: 8px; text-align: right; font-weight: bold;">${item.bs_transf.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
+                                <td style="padding: 8px; text-align: right; font-weight: bold;">${(item.bs_transf || 0).toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
                             </tr>
                         </tbody>
                     </table>
@@ -813,13 +791,14 @@
             });
         }
 
-        // RENDERIZAR HISTÓRICO Y SALDOS EN TIEMPO REAL
+        // HISTÓRICO Y SALDOS
         function renderHistoricoYBalos() {
             let saldoUsd = 0;
             let saldoBsEfec = 0;
             let saldoBsTransf = 0;
 
             const tbody = document.getElementById('movements-table-body');
+            if(!tbody) return;
             tbody.innerHTML = '';
 
             movimientosGlobales.forEach(item => {
@@ -832,11 +811,9 @@
                     saldoBsEfec -= (item.bs_efectivo || 0);
                     saldoBsTransf -= (item.bs_transf || 0);
                 } else if(item.type === 'exchange') {
-                    // Lógica cambiaria
                     if(item.debitAccount === 'usd') saldoUsd -= item.debitAmount;
                     if(item.debitAccount === 'bs_efectivo') saldoBsEfec -= item.debitAmount;
                     if(item.debitAccount === 'bs_transf') saldoBsTransf -= item.debitAmount;
-
                     if(item.creditAccount === 'usd') saldoUsd += item.creditAmount;
                     if(item.creditAccount === 'bs_efectivo') saldoBsEfec += item.creditAmount;
                     if(item.creditAccount === 'bs_transf') saldoBsTransf += item.creditAmount;
@@ -857,7 +834,7 @@
                             ${item.type === 'exchange' ? item.debitAmount + ' ' + item.debitAccount + ' ➔ ' + item.creditAmount + ' ' + item.creditAccount : ''}
                         </td>
                         <td class="p-2 text-center">
-                            <button onclick="solicitarClaveParaAccion(async () => { await window.FB.deleteDoc(window.FB.doc(window.db, 'movements', '${item.id}')); alert('Movimiento eliminado con éxito.'); })" class="text-red-600 underline font-bold">Eliminar</button>
+                            <button onclick="solicitarClaveParaAccion(async () => { await window.FB.deleteDoc(window.FB.doc(window.db, 'movements', '${item.id}')); alert('Eliminado.'); })" class="text-red-600 underline font-bold">Eliminar</button>
                         </td>
                     </tr>
                 `;
@@ -868,57 +845,34 @@
             document.getElementById('saldo-bs-transf').innerText = saldoBsTransf.toLocaleString('es-VE', {minimumFractionDigits: 2}) + ' Bs';
         }
 
-        // GENERAR REPORTE PDF CON TABLAS SEPARADAS POR MODALIDAD
+        // PDF OFICIAL
         function generarPDFReporte() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
             doc.text("IGLESIA CRISTIANA VIDA NUEVA", 105, 15, { align: "center" });
             doc.setFontSize(10);
             doc.text("Reporte Mensual de Tesorería - Desglose por Modalidad", 105, 22, { align: "center" });
 
-            // Filtrar movimientos del mes seleccionado
             const mesSel = document.getElementById('report-month').value;
             const movsMes = movimientosGlobales.filter(m => m.date && m.date.startsWith(mesSel));
 
-            // TABLA 1: BOLÍVARES EN EFECTIVO
             doc.text("1. Movimientos en Bolívares Efectivo ( Bs )", 14, 32);
             const dataBsEfec = movsMes.map(m => [m.date, m.correlative || '', m.category, m.type === 'income' ? (m.bs_efectivo || 0) : 0, m.type === 'expense' ? (m.bs_efectivo || 0) : 0]);
-            doc.autoTable({
-                startY: 35,
-                head: [['Fecha', 'Recibo', 'Concepto', 'Entrada (Bs)', 'Salida (Bs)']],
-                body: dataBsEfec.length ? dataBsEfec : [['-', '-', 'Sin movimientos en este periodo', '-', '-']],
-                theme: 'grid',
-                headStyles: [0, 75, 135]
-            });
+            doc.autoTable({ startY: 35, head: [['Fecha', 'Recibo', 'Concepto', 'Entrada (Bs)', 'Salida (Bs)']], body: dataBsEfec.length ? dataBsEfec : [['-', '-', 'Sin movimientos', '-', '-']], theme: 'grid' });
 
-            // TABLA 2: TRANSFERENCIAS BANCARIAS
             let finalY = doc.lastAutoTable.finalY + 10;
             doc.text("2. Movimientos en Transferencias Bancarias ( Bs )", 14, finalY);
             const dataBsTransf = movsMes.map(m => [m.date, m.correlative || '', m.category, m.type === 'income' ? (m.bs_transf || 0) : 0, m.type === 'expense' ? (m.bs_transf || 0) : 0]);
-            doc.autoTable({
-                startY: finalY + 3,
-                head: [['Fecha', 'Recibo', 'Concepto', 'Entrada (Bs)', 'Salida (Bs)']],
-                body: dataBsTransf.length ? dataBsTransf : [['-', '-', 'Sin movimientos en este periodo', '-', '-']],
-                theme: 'grid',
-                headStyles: [0, 75, 135]
-            });
+            doc.autoTable({ startY: finalY + 3, head: [['Fecha', 'Recibo', 'Concepto', 'Entrada (Bs)', 'Salida (Bs)']], body: dataBsTransf.length ? dataBsTransf : [['-', '-', 'Sin movimientos', '-', '-']], theme: 'grid' });
 
-            // TABLA 3: DIVISAS EN EFECTIVO
             finalY = doc.lastAutoTable.finalY + 10;
             doc.text("3. Movimientos en Divisas Efectivo ( $ )", 14, finalY);
             const dataUsd = movsMes.map(m => [m.date, m.correlative || '', m.category, m.type === 'income' ? (m.usd || 0) : 0, m.type === 'expense' ? (m.usd || 0) : 0]);
-            doc.autoTable({
-                startY: finalY + 3,
-                head: [['Fecha', 'Recibo', 'Concepto', 'Entrada ($)', 'Salida ($)']],
-                body: dataUsd.length ? dataUsd : [['-', '-', 'Sin movimientos en este periodo', '-', '-']],
-                theme: 'grid',
-                headStyles: [0, 75, 135]
-            });
+            doc.autoTable({ startY: finalY + 3, head: [['Fecha', 'Recibo', 'Concepto', 'Entrada ($)', 'Salida ($)']], body: dataUsd.length ? dataUsd : [['-', '-', 'Sin movimientos', '-', '-']], theme: 'grid' });
 
-            doc.save(`Reporte_Tesoría_${mesSel}.pdf`);
+            doc.save(`Reporte_Tesoreria_${mesSel}.pdf`);
         }
     </script>
 </body>
