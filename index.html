@@ -1,808 +1,978 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tesorería - Iglesia Cristiana Vida Nueva</title>
-<script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-<script type="module"> ... </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tesorería - Iglesia Cristiana Vida Nueva</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <!-- html2canvas para Recibos PNG -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF para Reportes PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- FIREBASE SDKs & CONFIGURACIÓN OFICIAL -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, onSnapshot, query, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC1cFNdH1evJQdq6KzUfC7mTiudU4XLAj0",
+            authDomain: "tesoreriavidanueva-e1912.firebaseapp.com",
+            projectId: "tesoreriavidanueva-e1912",
+            storageBucket: "tesoreriavidanueva-e1912.firebasestorage.app",
+            messagingSenderId: "803634051332",
+            appId: "1:803634051332:web:19663508832d0d2fb7b851",
+            measurementId: "G-KF0216ZZVL"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.db = getFirestore(app);
+        window.FB = { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, onSnapshot, query, orderBy, writeBatch };
+
+        // Notificar que Firebase está listo
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased pb-20">
 
-<div id="loading-screen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center space-y-3 transition-opacity duration-500">
-    <div class="w-16 h-16 bg-[#004B87] text-white rounded-full flex items-center justify-center font-black text-2xl shadow-lg animate-pulse">VN</div>
-    <p class="text-xs font-bold text-[#004B87] uppercase tracking-widest">Iglesia Cristiana Vida Nueva</p>
-    <p class="text-[10px] text-gray-400">Sincronizando tesorería...</p>
-</div>
-
-<header class="bg-white shadow-md border-b-4 border-[#E31B23] sticky top-0 z-40">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center">
-        <div class="flex items-center space-x-3">
-            <div class="bg-[#004B87] text-white font-black px-3 py-2 rounded-lg text-xl tracking-wider shadow">VN</div>
-            <div>
-                <h1 class="text-xl font-extrabold tracking-wide"><span class="text-[#E31B23]">VIDA</span><span class="text-[#004B87]">NUEVA</span></h1>
-                <p class="text-xs text-gray-500 uppercase tracking-widest font-semibold">Iglesia Cristiana — Sistema de Tesorería</p>
-            </div>
-        </div>
-        <div id="connection-status" class="mt-2 sm:mt-0 flex items-center space-x-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
-            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span id="status-text">Conectando...</span>
-        </div>
+    <!-- PANTALLA DE CARGA -->
+    <div id="loading-screen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center space-y-3 transition-opacity duration-500">
+        <div class="w-16 h-16 bg-[#004B87] text-white rounded-full flex items-center justify-center font-black text-2xl shadow-lg animate-pulse">VN</div>
+        <p class="text-xs font-bold text-[#004B87] uppercase tracking-widest">Iglesia Cristiana Vida Nueva</p>
+        <p class="text-[10px] text-gray-400">Sincronizando tesorería...</p>
     </div>
-    <nav class="bg-[#004B87] text-white shadow-inner overflow-x-auto">
-        <div class="max-w-5xl mx-auto flex whitespace-nowrap px-2">
-            <button onclick="switchTab('ingresos')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-yellow-400 bg-blue-900 transition flex items-center space-x-1 cursor-pointer" data-target="ingresos"><i data-lucide="plus-circle" class="w-4 h-4"></i> <span>Ingresos</span></button>
-            <button onclick="switchTab('egresos')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="egresos"><i data-lucide="minus-circle" class="w-4 h-4"></i> <span>Egresos</span></button>
-            <button onclick="switchTab('cambiaria')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="cambiaria"><i data-lucide="repeat" class="w-4 h-4"></i> <span>Cambiaria</span></button>
-            <button onclick="switchTab('historico')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="historico"><i data-lucide="book-open" class="w-4 h-4"></i> <span>Histórico</span></button>
-            <button onclick="switchTab('responsables')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="responsables"><i data-lucide="users" class="w-4 h-4"></i> <span>Responsables</span></button>
-            <button onclick="switchTab('reportes')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="reportes"><i data-lucide="file-text" class="w-4 h-4"></i> <span>Reportes PDF</span></button>
-            <button onclick="switchTab('ajustes')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="ajustes"><i data-lucide="settings" class="w-4 h-4"></i> <span>Ajustes</span></button>
-            <button onclick="switchTab('reiniciar')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-red-800 transition flex items-center space-x-1 text-red-200 cursor-pointer" data-target="reiniciar"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span>Reiniciar Fábrica</span></button>
-        </div>
-    </nav>
-</header>
 
-<main class="max-w-4xl mx-auto p-4 mt-2">
-
-<!-- INGRESOS -->
-<section id="view-ingresos" class="space-y-6">
-  <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-    <h2 class="text-lg font-bold text-[#004B87] flex items-center space-x-2 mb-4 border-b pb-2"><i data-lucide="plus-circle" class="w-5 h-5 text-[#E31B23]"></i><span>Registrar Ingreso / Ofrenda</span></h2>
-    <form id="form-ingreso" class="space-y-4" onsubmit="event.preventDefault(); totalizarIngreso();">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Fecha</label><input type="date" id="ing-date" required class="w-full mt-1 p-2 border rounded-lg outline-none"></div>
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Tipo de Ingreso</label>
-          <select id="ing-type" onchange="toggleIngresoFields()" class="w-full mt-1 p-2 border rounded-lg outline-none">
-            <option value="Servicio de oración">Servicio de oración</option><option value="Escuela dominical">Escuela dominical</option><option value="Diezmo">Diezmo</option><option value="Ofrenda especial">Ofrenda especial</option>
-          </select></div>
-      </div>
-      <div id="container-diezmo" class="hidden bg-blue-50 p-3 rounded-lg border border-blue-200">
-        <label class="block text-xs font-bold text-[#004B87] uppercase">Nombre de quien da el Diezmo</label>
-        <input type="text" id="ing-giver" placeholder="Nombre y Apellido" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none"></div>
-      <div id="container-especial" class="hidden bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-        <label class="block text-xs font-bold text-yellow-800 uppercase">Detalle de la Ofrenda Especial</label>
-        <input type="text" id="ing-detail" placeholder="Motivo o descripción" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none"></div>
-      <div class="border rounded-lg p-4 bg-gray-50">
-        <h3 class="font-bold text-sm text-[#004B87] mb-2 uppercase flex items-center justify-between"><span>Arqueo de Divisas ($)</span><span id="sum-divisas" class="text-green-600 font-extrabold">0,00 $</span></h3>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="denoms-usd-container"></div></div>
-      <div class="border rounded-lg p-4 bg-gray-50">
-        <h3 class="font-bold text-sm text-[#004B87] mb-2 uppercase flex items-center justify-between"><span>Arqueo de Bolívares Efectivo (Bs)</span><span id="sum-bs-efectivo" class="text-green-600 font-extrabold">0,00 Bs</span></h3>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="denoms-bs-container"></div></div>
-      <div class="border rounded-lg p-4 bg-gray-50">
-        <div class="flex justify-between items-center mb-2">
-          <h3 class="font-bold text-sm text-[#004B87] uppercase">Transferencias Bancarias (Bs)</h3>
-          <button type="button" onclick="addTransferRow()" class="bg-[#004B87] text-white px-2 py-1 rounded text-xs flex items-center space-x-1 hover:bg-blue-800 cursor-pointer"><i data-lucide="plus" class="w-3 h-3"></i> <span>Agregar</span></button>
-        </div>
-        <div id="transfers-list" class="space-y-2"></div>
-        <div class="text-right mt-2 font-bold text-sm text-gray-700">Total Transferencias: <span id="sum-bs-transf" class="text-green-600">0,00 Bs</span></div>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Recolectado por</label>
-          <select id="ing-responsible" required class="w-full mt-1 p-2 border rounded-lg outline-none resp-select"><option value="">Seleccione responsable...</option></select></div>
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Verificado por (Opcional)</label>
-          <input type="text" id="ing-verified" placeholder="Nombre del veedor" class="w-full mt-1 p-2 border rounded-lg outline-none"></div>
-      </div>
-      <button type="submit" class="w-full bg-[#E31B23] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 transition flex items-center justify-center space-x-2 text-lg cursor-pointer"><i data-lucide="check-circle" class="w-6 h-6"></i><span>TOTALIZAR E IMPRIMIR RECIBO</span></button>
-    </form>
-  </div>
-</section>
-
-<!-- EGRESOS -->
-<section id="view-egresos" class="hidden space-y-6">
-  <div class="bg-white p-6 rounded-xl shadow-md border">
-    <h2 class="text-lg font-bold text-[#004B87] flex items-center space-x-2 mb-4 border-b pb-2"><i data-lucide="minus-circle" class="w-5 h-5 text-[#E31B23]"></i><span>Registrar Egreso / Salida</span></h2>
-    <form id="form-egreso" class="space-y-4" onsubmit="event.preventDefault(); totalizarEgreso();">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Fecha</label><input type="date" id="eg-date" required class="w-full mt-1 p-2 border rounded-lg outline-none"></div>
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Tipo de Egreso</label>
-          <select id="eg-type" class="w-full mt-1 p-2 border rounded-lg outline-none">
-            <option value="Gastos operativos">Gastos operativos</option><option value="Construcción (Pro-Templo)">Construcción (Pro-Templo)</option><option value="Cortesías">Cortesías</option><option value="Gestión y mantenimiento">Gestión y mantenimiento</option><option value="Otros gastos">Otros gastos</option><option value="Ofrendas invitados">Ofrendas invitados</option><option value="Operación cambiaria">Operación cambiaria</option><option value="Comisión bancaria">Comisión bancaria</option>
-          </select></div>
-      </div>
-      <div><label class="block text-xs font-bold text-gray-700 uppercase">Descripción / Concepto</label><input type="text" id="eg-desc" required placeholder="Motivo detallado del gasto" class="w-full mt-1 p-2 border rounded-lg outline-none"></div>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg border">
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Monto Divisas ($)</label><input type="number" min="0" step="0.01" id="eg-usd" value="0" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none"></div>
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Monto Bs Efectivo</label><input type="number" min="0" step="0.01" id="eg-bs-efec" value="0" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none"></div>
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Monto Bs Transferencia</label>
-          <input type="number" min="0" step="0.01" id="eg-bs-transf" value="0" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
-          <input type="text" id="eg-ref" placeholder="N° de Referencia" class="w-full p-2 bg-white border rounded-lg text-xs outline-none mt-1"></div>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Autorizado por</label><input type="text" id="eg-auth" placeholder="Líder o Diácono" class="w-full mt-1 p-2 border rounded-lg outline-none"></div>
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Entregado por</label>
-          <select id="eg-responsible" required class="w-full mt-1 p-2 border rounded-lg outline-none resp-select"><option value="">Seleccione responsable...</option></select></div>
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Beneficiario / Proveedor</label><input type="text" id="eg-beneficiary" placeholder="Nombre o empresa" class="w-full mt-1 p-2 border rounded-lg outline-none"></div>
-      </div>
-      <button type="submit" class="w-full bg-[#004B87] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-900 transition flex items-center justify-center space-x-2 text-lg cursor-pointer"><i data-lucide="check-circle" class="w-6 h-6"></i><span>REGISTRAR EGRESO Y RECIBO</span></button>
-    </form>
-  </div>
-</section>
-
-<!-- CAMBIARIA -->
-<section id="view-cambiaria" class="hidden space-y-6">
-  <div class="bg-white p-6 rounded-xl shadow-md border">
-    <h2 class="text-lg font-bold text-[#004B87] flex items-center space-x-2 mb-4 border-b pb-2"><i data-lucide="repeat" class="w-5 h-5 text-[#E31B23]"></i><span>Operación Cambiaria (Compra / Venta de Divisas)</span></h2>
-    <form id="form-cambio" class="space-y-4" onsubmit="event.preventDefault(); registrarCambio();">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Fecha</label><input type="date" id="cam-date" required class="w-full mt-1 p-2 border rounded-lg outline-none"></div>
-        <div><label class="block text-xs font-bold text-gray-700 uppercase">Responsable</label>
-          <select id="cam-responsible" required class="w-full mt-1 p-2 border rounded-lg outline-none resp-select"><option value="">Seleccione responsable...</option></select></div>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border">
-        <div><label class="block text-xs font-bold text-red-700 uppercase">Partida que se DEBITA (Sale)</label>
-          <select id="cam-debit-account" onchange="calcularTasaImplicita()" class="w-full mt-1 p-2 border rounded-lg outline-none"><option value="usd">Divisas en efectivo ($)</option><option value="bs_efectivo">Bolívares en efectivo (Bs)</option><option value="bs_transf">Bolívares por transferencia (Bs)</option></select>
-          <label class="block text-xs font-bold text-gray-700 uppercase mt-2">Monto que sale</label>
-          <input type="number" min="0" step="0.01" id="cam-debit-amount" required oninput="calcularTasaImplicita()" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none"></div>
-        <div><label class="block text-xs font-bold text-green-700 uppercase">Partida que se ACREDITA (Entra)</label>
-          <select id="cam-credit-account" onchange="calcularTasaImplicita()" class="w-full mt-1 p-2 border rounded-lg outline-none"><option value="bs_efectivo">Bolívares en efectivo (Bs)</option><option value="bs_transf">Bolívares por transferencia (Bs)</option><option value="usd">Divisas en efectivo ($)</option></select>
-          <label class="block text-xs font-bold text-gray-700 uppercase mt-2">Monto que entra</label>
-          <input type="number" min="0" step="0.01" id="cam-credit-amount" required oninput="calcularTasaImplicita()" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none"></div>
-      </div>
-      <div class="bg-blue-50 p-3 rounded-lg flex justify-between items-center text-sm font-bold text-[#004B87]"><span>Tasa Implícita Calculada:</span><span id="tasa-implicita" class="text-lg">0,00 Bs/$</span></div>
-      <div><label class="block text-xs font-bold text-gray-700 uppercase">Comentario / Observación</label><input type="text" id="cam-comment" placeholder="Ej: Cambio de efectivo a transferencia" class="w-full mt-1 p-2 border rounded-lg outline-none"></div>
-      <button type="submit" class="w-full bg-[#004B87] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-900 transition flex items-center justify-center space-x-2 text-lg cursor-pointer"><i data-lucide="check-circle" class="w-6 h-6"></i><span>EJECUTAR OPERACIÓN CAMBIARIA Y RECIBO</span></button>
-    </form>
-  </div>
-</section>
-
-<!-- HISTÓRICO -->
-<section id="view-historico" class="hidden space-y-6">
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-    <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-green-500"><p class="text-xs font-bold text-gray-500 uppercase">Divisas en Efectivo</p><p id="saldo-usd" class="text-2xl font-black text-green-600 mt-1">0,00 $</p></div>
-    <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-blue-500"><p class="text-xs font-bold text-gray-500 uppercase">Bolívares en Efectivo</p><p id="saldo-bs-efec" class="text-2xl font-black text-blue-600 mt-1">0,00 Bs</p></div>
-    <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-indigo-500"><p class="text-xs font-bold text-gray-500 uppercase">Bolívares Transferencia</p><p id="saldo-bs-transf" class="text-2xl font-black text-indigo-600 mt-1">0,00 Bs</p></div>
-  </div>
-  <div class="bg-white p-6 rounded-xl shadow-md border">
-    <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center justify-between"><span>Histórico de Movimientos y Estado de Cuenta</span>
-      <button type="button" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 font-semibold cursor-pointer">Actualizar</button></h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse text-sm">
-        <thead><tr class="bg-gray-100 border-b text-xs text-gray-600 uppercase"><th class="p-2">Fecha / Recibo</th><th class="p-2">Tipo / Detalle</th><th class="p-2">Responsable</th><th class="p-2 text-right">Monto / Movimiento</th><th class="p-2 text-center">Acciones</th></tr></thead>
-        <tbody id="movements-table-body"></tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<!-- RESPONSABLES -->
-<section id="view-responsables" class="hidden space-y-6">
-  <div class="bg-white p-6 rounded-xl shadow-md border">
-    <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center space-x-2 border-b pb-2"><i data-lucide="users" class="w-5 h-5 text-[#E31B23]"></i><span>Gestión de Responsables</span></h2>
-    <form id="form-resp" onsubmit="event.preventDefault(); agregarResponsable();" class="flex space-x-2 mb-6">
-      <input type="text" id="nuevo-resp-nombre" required placeholder="Nombre completo del responsable" class="flex-1 p-2 border rounded-lg outline-none">
-      <button type="submit" class="bg-[#004B87] text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-900 transition cursor-pointer">Agregar</button>
-    </form>
-    <div id="responsables-list" class="space-y-2"></div>
-  </div>
-</section>
-
-<!-- REPORTES -->
-<section id="view-reportes" class="hidden space-y-6">
-  <div class="bg-white p-6 rounded-xl shadow-md border text-center space-y-4">
-    <h2 class="text-lg font-bold text-[#004B87]">Generación de Reportes Mensuales en PDF</h2>
-    <p class="text-sm text-gray-600">Seleccione el mes para generar el reporte oficial con iniciales VN y tablas separadas por modalidad.</p>
-    <div class="flex flex-col sm:flex-row justify-center gap-4 max-w-lg mx-auto">
-      <input type="month" id="report-month" class="p-2 border rounded-lg outline-none">
-      <button onclick="generarPDFReporte()" class="bg-[#E31B23] text-white font-bold px-6 py-2 rounded-lg hover:bg-red-700 transition flex items-center justify-center space-x-2 cursor-pointer"><i data-lucide="download" class="w-4 h-4"></i><span>Generar PDF Oficial VN</span></button>
-    </div>
-  </div>
-</section>
-
-<!-- AJUSTES -->
-<section id="view-ajustes" class="hidden space-y-6">
-  <div class="bg-white p-6 rounded-xl shadow-md border">
-    <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center space-x-2 border-b pb-2"><i data-lucide="settings" class="w-5 h-5 text-[#E31B23]"></i><span>Ajustes del Sistema (Protegido con Clave Maestra)</span></h2>
-    <div id="ajustes-locked" class="p-6 text-center space-y-4">
-      <p class="text-sm text-gray-600">Esta sección requiere ingresar la Clave Maestra (por defecto: <span class="font-bold">VidaNueva</span>).</p>
-      <input type="password" id="input-master-key" placeholder="Ingrese Clave Maestra" class="p-2 border rounded-lg text-center outline-none w-64 mx-auto block">
-      <button onclick="verificarClaveMaestra()" class="bg-[#004B87] text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-900 transition cursor-pointer">Desbloquear Ajustes</button>
-    </div>
-    <div id="ajustes-unlocked" class="hidden space-y-6">
-      <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-green-800 font-bold text-sm">✓ Ajustes desbloqueados correctamente.</div>
-      <div><h3 class="font-bold text-sm text-[#004B87] uppercase mb-2">Cambiar Clave Maestra</h3>
-        <div class="flex space-x-2"><input type="password" id="nueva-clave-maestra" placeholder="Nueva Clave" class="p-2 border rounded-lg outline-none flex-1">
-        <button onclick="cambiarClaveMaestra()" class="bg-[#E31B23] text-white px-4 py-2 rounded-lg font-bold cursor-pointer">Actualizar Clave</button></div></div>
-    </div>
-  </div>
-</section>
-
-<!-- REINICIAR -->
-<section id="view-reiniciar" class="hidden space-y-6">
-  <div class="bg-white p-6 rounded-xl shadow-md border border-red-200 text-center space-y-4">
-    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto"><i data-lucide="alert-triangle" class="w-6 h-6"></i></div>
-    <h2 class="text-lg font-bold text-red-700">Restaurar Configuración de Fábrica</h2>
-    <p class="text-sm text-gray-600 max-w-md mx-auto">Esta acción eliminará <strong>todos los registros del histórico</strong> y dejará la lista de responsables <strong>en blanco</strong>. Antes se descargará un respaldo. Requiere Clave Maestra.</p>
-    <div class="pt-2"><button onclick="solicitarClaveParaAccion(() => ejecutarReiniciarFabrica())" class="bg-red-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-red-700 transition cursor-pointer">REINICIAR SISTEMA A CERO</button></div>
-  </div>
-</section>
-
-</main>
-
-<!-- MODAL CLAVE -->
-<div id="modal-clave" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
-  <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4 text-center">
-    <h3 class="font-bold text-lg text-[#004B87]">Se requiere Clave Maestra</h3>
-    <p class="text-xs text-gray-600">Ingrese la clave para confirmar esta acción protegida.</p>
-    <input type="password" id="modal-password-input" placeholder="Clave Maestra" class="w-full p-2 border rounded-lg text-center outline-none">
-    <div class="flex space-x-2">
-      <button onclick="cerrarModalClave()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-bold cursor-pointer">Cancelar</button>
-      <button onclick="ejecutarAccionProtegida()" class="flex-1 bg-[#E31B23] text-white py-2 rounded-lg font-bold cursor-pointer">Confirmar</button>
-    </div>
-  </div>
-</div>
-
-<div id="recibo-preview-container" style="position:fixed;left:-9999px;top:0;"></div>
-
-<script>
-if (window.lucide) lucide.createIcons();
-
-/* ---------- Utilidades ---------- */
-const $ = id => document.getElementById(id);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
-const fmt = n => num(n).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-const hoy = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
-const CUENTAS = { usd: 'Divisas ($)', bs_efectivo: 'Bs efectivo', bs_transf: 'Bs transferencia' };
-
-/* ---------- Estado ---------- */
-const denominacionesUsd = [1, 2, 5, 10, 20, 50, 100];
-const denominacionesBs = [1, 5, 10, 20, 50, 100, 200, 500];
-let movimientosGlobales = [];
-let responsables = [];            // [{id, nombre}]
-let transferRowsCount = 0;
-let accionProtegida = null;
-let guardando = false;
-
-/* ---------- Clave maestra (se guarda como hash, no en texto plano) ---------- */
-async function sha256(t) {
-    if (!(window.crypto && crypto.subtle)) return 'plain:' + t;
-    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
-    return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('');
-}
-let passHash = localStorage.getItem('vn_master_hash');
-async function initClave() {
-    if (passHash) return;
-    const vieja = localStorage.getItem('vn_master_pass');       // migra la clave anterior
-    passHash = await sha256(vieja || 'VidaNueva');
-    localStorage.setItem('vn_master_hash', passHash);
-    localStorage.removeItem('vn_master_pass');
-}
-async function claveValida(v) { await initClave(); return (await sha256(v)) === passHash; }
-
-/* ---------- Modal de clave (CORREGIDO: el callback ya no se borra antes de ejecutarse) ---------- */
-function solicitarClaveParaAccion(cb) {
-    accionProtegida = cb;
-    $('modal-password-input').value = '';
-    $('modal-clave').classList.remove('hidden');
-    setTimeout(() => $('modal-password-input').focus(), 50);
-}
-function cerrarModalClave() {
-    $('modal-clave').classList.add('hidden');
-    accionProtegida = null;
-}
-async function ejecutarAccionProtegida() {
-    const cb = accionProtegida;                 // se guarda ANTES de cerrar el modal
-    if (!cb) return;
-    if (!(await claveValida($('modal-password-input').value))) { alert('Clave maestra incorrecta.'); return; }
-    cerrarModalClave();
-    try { await cb(); } catch (e) { console.error(e); alert('Error: ' + e.message); }
-}
-async function verificarClaveMaestra() {
-    if (await claveValida($('input-master-key').value)) {
-        $('ajustes-locked').classList.add('hidden');
-        $('ajustes-unlocked').classList.remove('hidden');
-        $('input-master-key').value = '';
-    } else alert('Clave incorrecta.');
-}
-async function cambiarClaveMaestra() {
-    const nueva = $('nueva-clave-maestra').value.trim();
-    if (nueva.length < 4) { alert('La clave debe tener al menos 4 caracteres.'); return; }
-    passHash = await sha256(nueva);
-    localStorage.setItem('vn_master_hash', passHash);
-    $('nueva-clave-maestra').value = '';
-    alert('Clave maestra actualizada. Nota: se guarda en este dispositivo.');
-}
-
-/* ---------- Estado de conexión / carga ---------- */
-function setEstado(ok, txt) {
-    const s = $('status-text'); if (s) s.innerText = txt;
-    const c = $('connection-status');
-    if (c) c.className = 'mt-2 sm:mt-0 flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium ' + (ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800');
-}
-function ocultarLoader() {
-    const l = $('loading-screen');
-    if (l && l.style.display !== 'none') { l.style.opacity = '0'; setTimeout(() => l.style.display = 'none', 500); }
-}
-
-/* ---------- Firestore: sincronización ---------- */
-function ordenar() {
-    movimientosGlobales.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
-}
-function iniciarFirestore() {
-    const { collection, onSnapshot } = window.FB;
-    onSnapshot(collection(window.db, 'movements'), snap => {
-        movimientosGlobales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        ordenar();
-        renderHistoricoYBalos();
-        setEstado(true, 'Conectado a la Nube');
-        ocultarLoader();
-    }, err => {
-        console.error('Firestore movimientos:', err);
-        setEstado(false, 'Error de conexión / permisos');
-        ocultarLoader();
-    });
-    onSnapshot(collection(window.db, 'responsables'), snap => {
-        responsables = snap.docs.map(d => ({ id: d.id, nombre: d.data().nombre || '' }))
-            .sort((a, b) => a.nombre.localeCompare(b.nombre));
-        actualizarSelectsResponsables();
-        renderResponsablesList();
-    }, err => console.error('Firestore responsables:', err));
-    migrarResponsablesLocales();
-}
-// Los responsables ahora viven en la nube (antes solo en el navegador). Migración única.
-async function migrarResponsablesLocales() {
-    const raw = localStorage.getItem('vn_responsables');
-    if (!raw) return;
-    try {
-        const lista = JSON.parse(raw) || [];
-        const snap = await window.FB.getDocs(window.FB.collection(window.db, 'responsables'));
-        if (snap.empty) for (const n of lista) await window.FB.addDoc(window.FB.collection(window.db, 'responsables'), { nombre: n, createdAt: new Date().toISOString() });
-        localStorage.removeItem('vn_responsables');
-    } catch (e) { console.error('Migración responsables:', e); }
-}
-function requiereDB() {
-    if (!(window.db && window.FB)) throw new Error('Sin conexión con la base de datos.');
-}
-
-/* ---------- Pestañas ---------- */
-function switchTab(tabId) {
-    document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
-    $(`view-${tabId}`).classList.remove('hidden');
-    document.querySelectorAll('nav button').forEach(b => {
-        b.classList.remove('border-yellow-400', 'bg-blue-900', 'bg-red-800');
-        b.classList.add('border-transparent');
-    });
-    document.querySelector(`[data-target="${tabId}"]`).classList.add('border-yellow-400', tabId === 'reiniciar' ? 'bg-red-800' : 'bg-blue-900');
-    if (tabId === 'historico') renderHistoricoYBalos();
-}
-
-/* ---------- Formulario de ingresos ---------- */
-function poblarDenominaciones() {
-    $('denoms-usd-container').innerHTML = denominacionesUsd.map(d => `
-        <div><label class="text-xs text-gray-600 font-semibold">$${d}</label>
-        <input type="number" min="0" step="1" value="0" data-val="${d}" oninput="calcularTotalDivisas()" class="w-full p-1 border rounded text-center denom-usd outline-none"></div>`).join('');
-    $('denoms-bs-container').innerHTML = denominacionesBs.map(d => `
-        <div><label class="text-xs text-gray-600 font-semibold">${d} Bs</label>
-        <input type="number" min="0" step="1" value="0" data-val="${d}" oninput="calcularTotalBsEfectivo()" class="w-full p-1 border rounded text-center denom-bs outline-none"></div>`).join('');
-}
-function sumarDenoms(sel) {
-    let t = 0;
-    document.querySelectorAll(sel).forEach(i => t += Math.max(0, num(i.value)) * num(i.dataset.val));
-    return t;
-}
-function calcularTotalDivisas() { const t = sumarDenoms('.denom-usd'); $('sum-divisas').innerText = fmt(t) + ' $'; return t; }
-function calcularTotalBsEfectivo() { const t = sumarDenoms('.denom-bs'); $('sum-bs-efectivo').innerText = fmt(t) + ' Bs'; return t; }
-function addTransferRow() {
-    transferRowsCount++;
-    const rowId = `transf-row-${transferRowsCount}`;
-    $('transfers-list').insertAdjacentHTML('beforeend', `
-        <div id="${rowId}" class="flex gap-2 items-center">
-            <input type="text" placeholder="Nombre de quien transfiere" class="flex-1 p-2 border rounded text-sm outline-none transf-name">
-            <input type="text" placeholder="N° Referencia" class="w-32 p-2 border rounded text-sm outline-none transf-ref">
-            <input type="number" min="0" step="0.01" placeholder="Monto Bs" oninput="calcularTotalBsTransf()" class="w-28 p-2 border rounded text-sm outline-none transf-monto">
-            <button type="button" onclick="document.getElementById('${rowId}').remove(); calcularTotalBsTransf();" class="text-red-600 font-bold px-2 cursor-pointer">✕</button>
-        </div>`);
-}
-function calcularTotalBsTransf() {
-    let t = 0;
-    document.querySelectorAll('.transf-monto').forEach(i => t += Math.max(0, num(i.value)));
-    $('sum-bs-transf').innerText = fmt(t) + ' Bs';
-    return t;
-}
-function toggleIngresoFields() {
-    const type = $('ing-type').value;
-    $('container-diezmo').classList.toggle('hidden', type !== 'Diezmo');
-    $('container-especial').classList.toggle('hidden', type !== 'Ofrenda especial');
-}
-
-/* ---------- Responsables (ahora sí se pueden eliminar) ---------- */
-function actualizarSelectsResponsables() {
-    document.querySelectorAll('.resp-select').forEach(sel => {
-        const actual = sel.value;
-        sel.innerHTML = '';
-        sel.add(new Option('Seleccione responsable...', ''));
-        responsables.forEach(r => sel.add(new Option(r.nombre, r.nombre)));
-        sel.value = responsables.some(r => r.nombre === actual) ? actual : '';
-    });
-}
-async function agregarResponsable() {
-    const input = $('nuevo-resp-nombre');
-    const n = input.value.trim();
-    if (!n) return;
-    if (responsables.some(r => r.nombre.toLowerCase() === n.toLowerCase())) { alert('Ese responsable ya existe.'); return; }
-    try {
-        requiereDB();
-        await window.FB.addDoc(window.FB.collection(window.db, 'responsables'), { nombre: n, createdAt: new Date().toISOString() });
-        input.value = '';
-    } catch (e) { alert('Error al agregar: ' + e.message); }
-}
-async function eliminarResponsable(r) {
-    requiereDB();
-    await window.FB.deleteDoc(window.FB.doc(window.db, 'responsables', r.id));
-    alert('Responsable eliminado.');
-}
-function renderResponsablesList() {
-    const cont = $('responsables-list');
-    cont.innerHTML = '';
-    if (!responsables.length) {
-        cont.innerHTML = '<p class="text-xs text-gray-500 italic">No hay responsables registrados.</p>';
-        return;
-    }
-    responsables.forEach(r => {
-        const fila = document.createElement('div');
-        fila.className = 'flex justify-between items-center p-2 bg-gray-50 border rounded-lg text-sm';
-        const nombre = document.createElement('span'); nombre.textContent = r.nombre;
-        const btn = document.createElement('button');
-        btn.className = 'text-red-600 underline font-bold text-xs cursor-pointer';
-        btn.textContent = 'Eliminar con Clave';
-        btn.addEventListener('click', () => solicitarClaveParaAccion(() => eliminarResponsable(r)));
-        fila.append(nombre, btn);
-        cont.appendChild(fila);
-    });
-}
-
-/* ---------- Operación cambiaria ---------- */
-function calcularTasaImplicita() {
-    const d = $('cam-debit-account').value, c = $('cam-credit-account').value;
-    const dA = num($('cam-debit-amount').value), cA = num($('cam-credit-amount').value);
-    const bs = a => a.startsWith('bs');
-    let tasa = 0;
-    if (d === 'usd' && bs(c) && dA > 0) tasa = cA / dA;
-    else if (bs(d) && c === 'usd' && cA > 0) tasa = dA / cA;
-    $('tasa-implicita').innerText = fmt(tasa) + ' Bs/$';
-}
-
-/* ---------- Guardado genérico ---------- */
-const correlativo = pref => `${pref}-${hoy().replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
-async function guardarMovimiento(data) {
-    if (guardando) return false;
-    guardando = true;
-    try {
-        requiereDB();
-        await window.FB.addDoc(window.FB.collection(window.db, 'movements'), data);
-        return true;
-    } catch (e) {
-        console.error(e);
-        alert('No se pudo guardar: ' + e.message);
-        return false;
-    } finally { guardando = false; }
-}
-
-async function totalizarIngreso() {
-    const usd = calcularTotalDivisas(), bsE = calcularTotalBsEfectivo(), bsT = calcularTotalBsTransf();
-    const resp = $('ing-responsible').value;
-    const tipo = $('ing-type').value;
-    if (!resp) { alert('Seleccione un responsable.'); return; }
-    if (usd + bsE + bsT <= 0) { alert('El ingreso está en cero. Registre algún monto.'); return; }
-    if (tipo === 'Diezmo' && !$('ing-giver').value.trim()) { alert('Indique el nombre de quien da el diezmo.'); return; }
-
-    const transferencias = [...document.querySelectorAll('#transfers-list > div')].map(r => ({
-        nombre: r.querySelector('.transf-name').value.trim(),
-        referencia: r.querySelector('.transf-ref').value.trim(),
-        monto: num(r.querySelector('.transf-monto').value)
-    })).filter(t => t.monto > 0);
-
-    const data = {
-        type: 'income', correlative: correlativo('ING'),
-        date: $('ing-date').value, category: tipo,
-        giver: $('ing-giver').value.trim(), detail: $('ing-detail').value.trim(),
-        usd, bs_efectivo: bsE, bs_transf: bsT, transferencias,
-        responsible: resp, verifiedBy: $('ing-verified').value.trim() || 'Ninguno',
-        createdAt: new Date().toISOString()
-    };
-    if (!(await guardarMovimiento(data))) return;
-    generarRecibo(data);
-    resetIngreso();
-    alert('¡Ingreso guardado y recibo generado!');
-}
-function resetIngreso() {
-    $('form-ingreso').reset();
-    $('ing-date').value = hoy();
-    toggleIngresoFields();
-    poblarDenominaciones();
-    $('transfers-list').innerHTML = '';
-    addTransferRow();
-    calcularTotalDivisas(); calcularTotalBsEfectivo(); calcularTotalBsTransf();
-}
-
-async function totalizarEgreso() {
-    const resp = $('eg-responsible').value;
-    if (!resp) { alert('Seleccione responsable.'); return; }
-    const usd = num($('eg-usd').value), bsE = num($('eg-bs-efec').value), bsT = num($('eg-bs-transf').value);
-    if (usd < 0 || bsE < 0 || bsT < 0) { alert('Los montos no pueden ser negativos.'); return; }
-    if (usd + bsE + bsT <= 0) { alert('Registre al menos un monto mayor a cero.'); return; }
-    const data = {
-        type: 'expense', correlative: correlativo('EGR'),
-        date: $('eg-date').value, category: $('eg-type').value, detail: $('eg-desc').value.trim(),
-        usd, bs_efectivo: bsE, bs_transf: bsT, reference: $('eg-ref').value.trim(),
-        responsible: resp, authorizedBy: $('eg-auth').value.trim() || 'N/A',
-        beneficiary: $('eg-beneficiary').value.trim() || 'N/A',
-        createdAt: new Date().toISOString()
-    };
-    if (!(await guardarMovimiento(data))) return;
-    generarRecibo(data);
-    $('form-egreso').reset();
-    $('eg-date').value = hoy();
-    alert('¡Egreso registrado y comprobante generado!');
-}
-
-async function registrarCambio() {
-    const resp = $('cam-responsible').value;
-    if (!resp) { alert('Seleccione responsable.'); return; }
-    const dA = num($('cam-debit-amount').value), cA = num($('cam-credit-amount').value);
-    const dAcc = $('cam-debit-account').value, cAcc = $('cam-credit-account').value;
-    if (dAcc === cAcc) { alert('La partida que sale y la que entra deben ser distintas.'); return; }
-    if (dA <= 0 || cA <= 0) { alert('Ambos montos deben ser mayores a cero.'); return; }
-    const data = {
-        type: 'exchange', correlative: correlativo('CAM'),
-        date: $('cam-date').value, category: 'Operación cambiaria',
-        detail: $('cam-comment').value.trim() || 'Compra / Venta de divisas',
-        debitAccount: dAcc, debitAmount: dA, creditAccount: cAcc, creditAmount: cA,
-        responsible: resp, createdAt: new Date().toISOString()
-    };
-    if (!(await guardarMovimiento(data))) return;
-    generarRecibo(data);
-    $('form-cambio').reset();
-    $('cam-date').value = hoy();
-    calcularTasaImplicita();
-    alert('¡Operación cambiaria ejecutada y recibo generado!');
-}
-
-/* ---------- Recibos PNG (ingreso, egreso y cambiaria en una sola función) ---------- */
-function generarRecibo(item) {
-    const cont = $('recibo-preview-container');
-    cont.style.cssText = 'position:fixed;left:-9999px;top:0;';
-    const ex = item.type === 'exchange';
-    const titulo = item.type === 'income' ? 'RECEPCIÓN DE OFRENDAS' : item.type === 'expense' ? 'COMPROBANTE DE EGRESO' : 'COMPROBANTE DE OPERACIÓN CAMBIARIA';
-    const fila = (a, b, st = '') => `<tr style="border-bottom:1px solid #ddd"><td style="padding:8px;${st}">${a}</td><td style="padding:8px;text-align:right;font-weight:bold">${b}</td></tr>`;
-    const filas = ex
-        ? fila('SE DEBITA (SALE): ' + esc(CUENTAS[item.debitAccount]), fmt(item.debitAmount), 'color:#E31B23;font-weight:bold')
-          + fila('SE ACREDITA (ENTRA): ' + esc(CUENTAS[item.creditAccount]), fmt(item.creditAmount), 'color:#004B87;font-weight:bold')
-        : fila('Divisas Efectivo ($)', fmt(item.usd) + ' $') + fila('Bolívares Efectivo (Bs)', fmt(item.bs_efectivo) + ' Bs') + fila('Bolívares Transferencia (Bs)', fmt(item.bs_transf) + ' Bs');
-    const extra = [];
-    if (item.type === 'income' && item.verifiedBy && item.verifiedBy !== 'Ninguno') extra.push('Verificado por: ' + esc(item.verifiedBy));
-    if (item.type === 'expense') {
-        extra.push('Beneficiario: ' + esc(item.beneficiary), 'Autorizado por: ' + esc(item.authorizedBy));
-        if (item.reference) extra.push('Referencia: ' + esc(item.reference));
-    }
-    cont.innerHTML = `
-        <div id="recibo-canvas" style="width:600px;padding:30px;background:#fff;font-family:sans-serif;color:#333;border:4px solid #004B87;">
-            <div style="display:flex;align-items:center;border-bottom:2px solid #E31B23;padding-bottom:15px;margin-bottom:20px;">
-                <div style="width:45px;height:45px;background:#004B87;color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:18px;margin-right:15px;">VN</div>
-                <div style="flex:1;text-align:center;">
-                    <h2 style="margin:0;color:#E31B23;font-size:22px;font-weight:900;">VIDA NUEVA</h2>
-                    <p style="margin:2px 0;color:#004B87;font-size:11px;font-weight:bold;text-transform:uppercase;">Iglesia Cristiana — Tesorería</p>
-                    <h3 style="margin:5px 0 0;color:#333;font-size:15px;">${titulo}</h3>
+    <!-- HEADER -->
+    <header class="bg-white shadow-md border-b-4 border-[#E31B23] sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-[#004B87] text-white font-black px-3 py-2 rounded-lg text-xl tracking-wider shadow">VN</div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-wide"><span class="text-[#E31B23]">VIDA</span><span class="text-[#004B87]">NUEVA</span></h1>
+                    <p class="text-xs text-gray-500 uppercase tracking-widest font-semibold">Iglesia Cristiana — Sistema de Tesorería</p>
                 </div>
             </div>
-            <div style="font-size:13px;margin-bottom:15px;display:flex;justify-content:space-between;">
-                <div><strong>N°:</strong> ${esc(item.correlative)}</div><div><strong>Fecha:</strong> ${esc(item.date)}</div>
+            <div id="connection-status" class="mt-2 sm:mt-0 flex items-center space-x-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span id="status-text">Conectando...</span>
             </div>
-            <div style="font-size:13px;margin-bottom:15px;"><strong>Concepto:</strong> ${esc(item.category)} - ${esc(item.detail || item.giver || '')}</div>
-            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:15px;">
-                <thead><tr style="background:#004B87;color:#fff;"><th style="padding:8px;text-align:left;">Detalle</th><th style="padding:8px;text-align:right;">Monto</th></tr></thead>
-                <tbody>${filas}</tbody>
-            </table>
-            ${extra.length ? `<div style="font-size:12px;margin-bottom:10px;">${extra.join('<br>')}</div>` : ''}
-            <div style="font-size:12px;margin-top:25px;display:flex;justify-content:space-between;">
-                <div>Responsable: <strong>${esc(item.responsible)}</strong></div><div>Emisión: ${new Date().toLocaleDateString('es-VE')}</div>
+        </div>
+        <!-- MENÚ DE PESTAÑAS -->
+        <nav class="bg-[#004B87] text-white shadow-inner overflow-x-auto">
+            <div class="max-w-5xl mx-auto flex whitespace-nowrap px-2">
+                <button onclick="switchTab('ingresos')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-yellow-400 bg-blue-900 transition flex items-center space-x-1 cursor-pointer" data-target="ingresos">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> <span>Ingresos</span>
+                </button>
+                <button onclick="switchTab('egresos')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="egresos">
+                    <i data-lucide="minus-circle" class="w-4 h-4"></i> <span>Egresos</span>
+                </button>
+                <button onclick="switchTab('cambiaria')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="cambiaria">
+                    <i data-lucide="repeat" class="w-4 h-4"></i> <span>Cambiaria</span>
+                </button>
+                <button onclick="switchTab('historico')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="historico">
+                    <i data-lucide="book-open" class="w-4 h-4"></i> <span>Histórico</span>
+                </button>
+                <button onclick="switchTab('responsables')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="responsables">
+                    <i data-lucide="users" class="w-4 h-4"></i> <span>Responsables</span>
+                </button>
+                <button onclick="switchTab('reportes')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="reportes">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> <span>Reportes PDF</span>
+                </button>
+                <button onclick="switchTab('ajustes')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1 cursor-pointer" data-target="ajustes">
+                    <i data-lucide="settings" class="w-4 h-4"></i> <span>Ajustes</span>
+                </button>
+                <button onclick="switchTab('reiniciar')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-red-800 transition flex items-center space-x-1 text-red-200 cursor-pointer" data-target="reiniciar">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span>Reiniciar Fábrica</span>
+                </button>
             </div>
-        </div>`;
-    html2canvas($('recibo-canvas'), { scale: 2, backgroundColor: '#ffffff' })
-        .then(canvas => {
+        </nav>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="max-w-4xl mx-auto p-4 mt-2">
+
+        <!-- PESTAÑA 1: INGRESOS -->
+        <section id="view-ingresos" class="space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                <h2 class="text-lg font-bold text-[#004B87] flex items-center space-x-2 mb-4 border-b pb-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-[#E31B23]"></i>
+                    <span>Registrar Ingreso / Ofrenda</span>
+                </h2>
+                
+                <form id="form-ingreso" class="space-y-4" onsubmit="event.preventDefault(); totalizarIngreso();">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Fecha</label>
+                            <input type="date" id="ing-date" required class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Tipo de Ingreso</label>
+                            <select id="ing-type" onchange="toggleIngresoFields()" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                                <option value="Servicio de oración">Servicio de oración</option>
+                                <option value="Escuela dominical">Escuela dominical</option>
+                                <option value="Diezmo">Diezmo</option>
+                                <option value="Ofrenda especial">Ofrenda especial</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="container-diezmo" class="hidden bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <label class="block text-xs font-bold text-[#004B87] uppercase">Nombre de quien da el Diezmo</label>
+                        <input type="text" id="ing-giver" placeholder="Nombre y Apellido" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                    </div>
+
+                    <div id="container-especial" class="hidden bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                        <label class="block text-xs font-bold text-yellow-800 uppercase">Detalle de la Ofrenda Especial</label>
+                        <input type="text" id="ing-detail" placeholder="Motivo o descripción" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                    </div>
+
+                    <!-- ARQUEO DE DIVISAS -->
+                    <div class="border rounded-lg p-4 bg-gray-50">
+                        <h3 class="font-bold text-sm text-[#004B87] mb-2 uppercase flex items-center justify-between">
+                            <span>Arqueo de Divisas ($)</span>
+                            <span id="sum-divisas" class="text-green-600 font-extrabold">0,00 $</span>
+                        </h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="denoms-usd-container"></div>
+                    </div>
+
+                    <!-- ARQUEO DE BOLÍVARES -->
+                    <div class="border rounded-lg p-4 bg-gray-50">
+                        <h3 class="font-bold text-sm text-[#004B87] mb-2 uppercase flex items-center justify-between">
+                            <span>Arqueo de Bolívares Efectivo (Bs)</span>
+                            <span id="sum-bs-efectivo" class="text-green-600 font-extrabold">0,00 Bs</span>
+                        </h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="denoms-bs-container"></div>
+                    </div>
+
+                    <!-- TRANSFERENCIAS BANCARIAS -->
+                    <div class="border rounded-lg p-4 bg-gray-50">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-sm text-[#004B87] uppercase">Transferencias Bancarias (Bs)</h3>
+                            <button type="button" onclick="addTransferRow()" class="bg-[#004B87] text-white px-2 py-1 rounded text-xs flex items-center space-x-1 hover:bg-blue-800 cursor-pointer">
+                                <i data-lucide="plus" class="w-3 h-3"></i> <span>Agregar</span>
+                            </button>
+                        </div>
+                        <div id="transfers-list" class="space-y-2"></div>
+                        <div class="text-right mt-2 font-bold text-sm text-gray-700">
+                            Total Transferencias: <span id="sum-bs-transf" class="text-green-600">0,00 Bs</span>
+                        </div>
+                    </div>
+
+                    <!-- RESPONSABLES -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Recolectado por</label>
+                            <select id="ing-responsible" required class="w-full mt-1 p-2 border rounded-lg outline-none resp-select">
+                                <option value="">Seleccione responsable...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Verificado por (Opcional)</label>
+                            <input type="text" id="ing-verified" placeholder="Nombre del veedor" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-[#E31B23] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 transition flex items-center justify-center space-x-2 text-lg cursor-pointer">
+                        <i data-lucide="check-circle" class="w-6 h-6"></i>
+                        <span>TOTALIZAR E IMPRIMIR RECIBO</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 2: EGRESOS -->
+        <section id="view-egresos" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border">
+                <h2 class="text-lg font-bold text-[#004B87] flex items-center space-x-2 mb-4 border-b pb-2">
+                    <i data-lucide="minus-circle" class="w-5 h-5 text-[#E31B23]"></i>
+                    <span>Registrar Egreso / Salida</span>
+                </h2>
+                <form id="form-egreso" class="space-y-4" onsubmit="event.preventDefault(); totalizarEgreso();">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Fecha</label>
+                            <input type="date" id="eg-date" required class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Tipo de Egreso</label>
+                            <select id="eg-type" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                                <option value="Gastos operativos">Gastos operativos</option>
+                                <option value="Construcción (Pro-Templo)">Construcción (Pro-Templo)</option>
+                                <option value="Cortesías">Cortesías</option>
+                                <option value="Gestión y mantenimiento">Gestión y mantenimiento</option>
+                                <option value="Otros gastos">Otros gastos</option>
+                                <option value="Ofrendas invitados">Ofrendas invitados</option>
+                                <option value="Operación cambiaria">Operación cambiaria</option>
+                                <option value="Comisión bancaria">Comisión bancaria</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase">Descripción / Concepto</label>
+                        <input type="text" id="eg-desc" required placeholder="Motivo detallado del gasto" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg border">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Monto Divisas ($)</label>
+                            <input type="number" min="0" step="0.01" id="eg-usd" value="0" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Monto Bs Efectivo</label>
+                            <input type="number" min="0" step="0.01" id="eg-bs-efec" value="0" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Monto Bs Transferencia</label>
+                            <input type="number" min="0" step="0.01" id="eg-bs-transf" value="0" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                            <input type="text" id="eg-ref" placeholder="N° de Referencia" class="w-full mt-1 p-2 bg-white border rounded-lg text-xs outline-none mt-1">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Autorizado por</label>
+                            <input type="text" id="eg-auth" placeholder="Líder o Diácono" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Entregado por</label>
+                            <select id="eg-responsible" required class="w-full mt-1 p-2 border rounded-lg outline-none resp-select">
+                                <option value="">Seleccione responsable...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Beneficiario / Proveedor</label>
+                            <input type="text" id="eg-beneficiary" placeholder="Nombre o empresa" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-[#004B87] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-900 transition flex items-center justify-center space-x-2 text-lg cursor-pointer">
+                        <i data-lucide="check-circle" class="w-6 h-6"></i>
+                        <span>REGISTRAR EGRESO Y RECIBO</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 3: OPERACIÓN CAMBIARIA -->
+        <section id="view-cambiaria" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border">
+                <h2 class="text-lg font-bold text-[#004B87] flex items-center space-x-2 mb-4 border-b pb-2">
+                    <i data-lucide="repeat" class="w-5 h-5 text-[#E31B23]"></i>
+                    <span>Operación Cambiaria (Compra / Venta de Divisas)</span>
+                </h2>
+                <form id="form-cambio" class="space-y-4" onsubmit="event.preventDefault(); registrarCambio();">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Fecha</label>
+                            <input type="date" id="cam-date" required class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Responsable</label>
+                            <select id="cam-responsible" required class="w-full mt-1 p-2 border rounded-lg outline-none resp-select">
+                                <option value="">Seleccione responsable...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border">
+                        <div>
+                            <label class="block text-xs font-bold text-red-700 uppercase">Partida que se DEBITA (Sale)</label>
+                            <select id="cam-debit-account" onchange="calcularTasaImplicita()" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                                <option value="usd">Divisas en efectivo ($)</option>
+                                <option value="bs_efectivo">Bolívares en efectivo (Bs)</option>
+                                <option value="bs_transf">Bolívares por transferencia (Bs)</option>
+                            </select>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mt-2">Monto que sale</label>
+                            <input type="number" min="0" step="0.01" id="cam-debit-amount" required oninput="calcularTasaImplicita()" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-green-700 uppercase">Partida que se ACREDITA (Entra)</label>
+                            <select id="cam-credit-account" onchange="calcularTasaImplicita()" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                                <option value="bs_efectivo">Bolívares en efectivo (Bs)</option>
+                                <option value="bs_transf">Bolívares por transferencia (Bs)</option>
+                                <option value="usd">Divisas en efectivo ($)</option>
+                            </select>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mt-2">Monto que entra</label>
+                            <input type="number" min="0" step="0.01" id="cam-credit-amount" required oninput="calcularTasaImplicita()" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-lg flex justify-between items-center text-sm font-bold text-[#004B87]">
+                        <span>Tasa Implícita Calculada:</span>
+                        <span id="tasa-implicita" class="text-lg">0,00 Bs/$</span>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase">Comentario / Observación</label>
+                        <input type="text" id="cam-comment" placeholder="Ej: Cambio de efectivo a transferencia" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-[#004B87] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-900 transition flex items-center justify-center space-x-2 text-lg cursor-pointer">
+                        <i data-lucide="check-circle" class="w-6 h-6"></i>
+                        <span>EJECUTAR OPERACIÓN CAMBIARIA Y RECIBO</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 4: HISTÓRICO Y ESTADO DE CUENTA -->
+        <section id="view-historico" class="hidden space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-green-500">
+                    <p class="text-xs font-bold text-gray-500 uppercase">Divisas en Efectivo</p>
+                    <p id="saldo-usd" class="text-2xl font-black text-green-600 mt-1">0,00 $</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-blue-500">
+                    <p class="text-xs font-bold text-gray-500 uppercase">Bolívares en Efectivo</p>
+                    <p id="saldo-bs-efec" class="text-2xl font-black text-blue-600 mt-1">0,00 Bs</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-indigo-500">
+                    <p class="text-xs font-bold text-gray-500 uppercase">Bolívares Transferencia</p>
+                    <p id="saldo-bs-transf" class="text-2xl font-black text-indigo-600 mt-1">0,00 Bs</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border">
+                <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center justify-between">
+                    <span>Histórico de Movimientos y Estado de Cuenta</span>
+                    <button type="button" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 font-semibold cursor-pointer">Actualizar</button>
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-gray-100 border-b text-xs text-gray-600 uppercase">
+                                <th class="p-2">Fecha / Recibo</th>
+                                <th class="p-2">Tipo / Detalle</th>
+                                <th class="p-2">Responsable</th>
+                                <th class="p-2 text-right">Monto / Movimiento</th>
+                                <th class="p-2 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movements-table-body">
+                            <!-- Dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 5: RESPONSABLES -->
+        <section id="view-responsables" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border">
+                <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center space-x-2 border-b pb-2">
+                    <i data-lucide="users" class="w-5 h-5 text-[#E31B23]"></i>
+                    <span>Gestión de Responsables</span>
+                </h2>
+                <form id="form-resp" onsubmit="event.preventDefault(); agregarResponsable();" class="flex space-x-2 mb-6">
+                    <input type="text" id="nuevo-resp-nombre" required placeholder="Nombre completo del responsable" class="flex-1 p-2 border rounded-lg outline-none">
+                    <button type="submit" class="bg-[#004B87] text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-900 transition cursor-pointer">Agregar</button>
+                </form>
+                <div id="responsables-list" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 6: REPORTES -->
+        <section id="view-reportes" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border text-center space-y-4">
+                <h2 class="text-lg font-bold text-[#004B87]">Generación de Reportes Mensuales en PDF</h2>
+                <p class="text-sm text-gray-600">Seleccione el mes para generar el reporte oficial con iniciales VN y tablas separadas por modalidad.</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4 max-w-lg mx-auto">
+                    <input type="month" id="report-month" class="p-2 border rounded-lg outline-none">
+                    <button onclick="generarPDFReporte()" class="bg-[#E31B23] text-white font-bold px-6 py-2 rounded-lg hover:bg-red-700 transition flex items-center justify-center space-x-2 cursor-pointer">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Generar PDF Oficial VN</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 7: AJUSTES -->
+        <section id="view-ajustes" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border">
+                <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center space-x-2 border-b pb-2">
+                    <i data-lucide="settings" class="w-5 h-5 text-[#E31B23]"></i>
+                    <span>Ajustes del Sistema (Protegido con Clave Maestra)</span>
+                </h2>
+                <div id="ajustes-locked" class="p-6 text-center space-y-4">
+                    <p class="text-sm text-gray-600">Esta sección requiere ingresar la Clave Maestra (por defecto: <span class="font-bold">VidaNueva</span>).</p>
+                    <input type="password" id="input-master-key" placeholder="Ingrese Clave Maestra" class="p-2 border rounded-lg text-center outline-none w-64 mx-auto block">
+                    <button onclick="verificarClaveMaestra()" class="bg-[#004B87] text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-900 transition cursor-pointer">Desbloquear Ajustes</button>
+                </div>
+                <div id="ajustes-unlocked" class="hidden space-y-6">
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-green-800 font-bold text-sm">✓ Ajustes desbloqueados correctamente.</div>
+                    <div>
+                        <h3 class="font-bold text-sm text-[#004B87] uppercase mb-2">Cambiar Clave Maestra</h3>
+                        <div class="flex space-x-2">
+                            <input type="password" id="nueva-clave-maestra" placeholder="Nueva Clave" class="p-2 border rounded-lg outline-none flex-1">
+                            <button onclick="cambiarClaveMaestra()" class="bg-[#E31B23] text-white px-4 py-2 rounded-lg font-bold cursor-pointer">Actualizar Clave</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 8: REINICIAR FÁBRICA -->
+        <section id="view-reiniciar" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border border-red-200 text-center space-y-4">
+                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <h2 class="text-lg font-bold text-red-700">Restaurar Configuración de Fábrica</h2>
+                <p class="text-sm text-gray-600 max-w-md mx-auto">Esta acción eliminará <strong>todos los registros del histórico</strong> y dejará la lista de responsables <strong>en blanco</strong>. Antes se descargará un respaldo. Requiere Clave Maestra.</p>
+                <div class="pt-2">
+                    <button onclick="solicitarClaveParaAccion(() => ejecutarReiniciarFabrica())" class="bg-red-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-red-700 transition cursor-pointer">
+                        REINICIAR SISTEMA A CERO
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL CLAVE -->
+    <div id="modal-clave" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4 text-center">
+            <h3 class="font-bold text-lg text-[#004B87]">Se requiere Clave Maestra</h3>
+            <p class="text-xs text-gray-600">Ingrese la clave para confirmar esta acción protegida.</p>
+            <input type="password" id="modal-password-input" placeholder="Clave Maestra" class="w-full p-2 border rounded-lg text-center outline-none">
+            <div class="flex space-x-2">
+                <button onclick="cerrarModalClave()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-bold cursor-pointer">Cancelar</button>
+                <button onclick="ejecutarAccionProtegida()" class="flex-1 bg-[#E31B23] text-white py-2 rounded-lg font-bold cursor-pointer">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR RECIBOS -->
+    <div id="recibo-preview-container" style="position:fixed;left:-9999px;top:0;"></div>
+
+    <script>
+        if (window.lucide) lucide.createIcons();
+
+        const $ = id => document.getElementById(id);
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+        const fmt = n => num(n).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const hoy = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+        const CUENTAS = { usd: 'Divisas ($)', bs_efectivo: 'Bs efectivo', bs_transf: 'Bs transferencia' };
+
+        const denominacionesUsd = [1, 2, 5, 10, 20, 50, 100];
+        const denominacionesBs = [1, 5, 10, 20, 50, 100, 200, 500];
+        let movimientosGlobales = [];
+        let responsables = [];
+        let transferRowsCount = 0;
+        let accionProtegida = null;
+        let guardando = false;
+
+        /* ---------- Clave Maestra ---------- */
+        async function sha256(t) {
+            if (!(window.crypto && crypto.subtle)) return 'plain:' + t;
+            const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+            return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('');
+        }
+        let passHash = localStorage.getItem('vn_master_hash');
+        async function initClave() {
+            if (passHash) return;
+            const vieja = localStorage.getItem('vn_master_pass');
+            passHash = await sha256(vieja || 'VidaNueva');
+            localStorage.setItem('vn_master_hash', passHash);
+            localStorage.removeItem('vn_master_pass');
+        }
+        async function claveValida(v) { await initClave(); return (await sha256(v)) === passHash; }
+
+        function solicitarClaveParaAccion(cb) {
+            accionProtegida = cb;
+            $('modal-password-input').value = '';
+            $('modal-clave').classList.remove('hidden');
+            setTimeout(() => $('modal-password-input').focus(), 50);
+        }
+        function cerrarModalClave() {
+            $('modal-clave').classList.add('hidden');
+            accionProtegida = null;
+        }
+        async function ejecutarAccionProtegida() {
+            const cb = accionProtegida;
+            if (!cb) return;
+            if (!(await claveValida($('modal-password-input').value))) { alert('Clave maestra incorrecta.'); return; }
+            cerrarModalClave();
+            try { await cb(); } catch (e) { console.error(e); alert('Error: ' + e.message); }
+        }
+        async function verificarClaveMaestra() {
+            if (await claveValida($('input-master-key').value)) {
+                $('ajustes-locked').classList.add('hidden');
+                $('ajustes-unlocked').classList.remove('hidden');
+                $('input-master-key').value = '';
+            } else alert('Clave incorrecta.');
+        }
+        async function cambiarClaveMaestra() {
+            const nueva = $('nueva-clave-maestra').value.trim();
+            if (nueva.length < 4) { alert('La clave debe tener al menos 4 caracteres.'); return; }
+            passHash = await sha256(nueva);
+            localStorage.setItem('vn_master_hash', passHash);
+            $('nueva-clave-maestra').value = '';
+            alert('Clave maestra actualizada.');
+        }
+
+        /* ---------- Conexión / Loader ---------- */
+        function setEstado(ok, txt) {
+            const s = $('status-text'); if (s) s.innerText = txt;
+            const c = $('connection-status');
+            if (c) c.className = 'mt-2 sm:mt-0 flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium ' + (ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800');
+        }
+        function ocultarLoader() {
+            const l = $('loading-screen');
+            if (l && l.style.display !== 'none') { l.style.opacity = '0'; setTimeout(() => l.style.display = 'none', 500); }
+        }
+
+        /* ---------- Firestore ---------- */
+        function ordenar() {
+            movimientosGlobales.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
+        }
+        function iniciarFirestore() {
+            const { collection, onSnapshot } = window.FB;
+            onSnapshot(collection(window.db, 'movements'), snap => {
+                movimientosGlobales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                ordenar();
+                renderHistoricoYBalos();
+                setEstado(true, 'Conectado a la Nube');
+                ocultarLoader();
+            }, err => {
+                console.error('Firestore movimientos:', err);
+                setEstado(false, 'Error de conexión');
+                ocultarLoader();
+            });
+            onSnapshot(collection(window.db, 'responsables'), snap => {
+                responsables = snap.docs.map(d => ({ id: d.id, nombre: d.data().nombre || '' }))
+                    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+                actualizarSelectsResponsables();
+                renderResponsablesList();
+            }, err => console.error('Firestore responsables:', err));
+            migrarResponsablesLocales();
+        }
+
+        async function migrarResponsablesLocales() {
+            const raw = localStorage.getItem('vn_responsables');
+            if (!raw) return;
+            try {
+                const lista = JSON.parse(raw) || [];
+                const snap = await window.FB.getDocs(window.FB.collection(window.db, 'responsables'));
+                if (snap.empty) for (const n of lista) await window.FB.addDoc(window.FB.collection(window.db, 'responsables'), { nombre: n, createdAt: new Date().toISOString() });
+                localStorage.removeItem('vn_responsables');
+            } catch (e) { console.error('Migración:', e); }
+        }
+        function requiereDB() {
+            if (!(window.db && window.FB)) throw new Error('Sin conexión con la base de datos.');
+        }
+
+        /* ---------- Navegación ---------- */
+        function switchTab(tabId) {
+            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+            $(`view-${tabId}`).classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(b => {
+                b.classList.remove('border-yellow-400', 'bg-blue-900', 'bg-red-800');
+                b.classList.add('border-transparent');
+            });
+            document.querySelector(`[data-target="${tabId}"]`).classList.add('border-yellow-400', tabId === 'reiniciar' ? 'bg-red-800' : 'bg-blue-900');
+            if (tabId === 'historico') renderHistoricoYBalos();
+        }
+
+        /* ---------- Ingresos y Egresos ---------- */
+        function poblarDenominaciones() {
+            $('denoms-usd-container').innerHTML = denominacionesUsd.map(d => `
+                <div><label class="text-xs text-gray-600 font-semibold">$${d}</label>
+                <input type="number" min="0" step="1" value="0" data-val="${d}" oninput="calcularTotalDivisas()" class="w-full p-1 border rounded text-center denom-usd outline-none"></div>`).join('');
+            $('denoms-bs-container').innerHTML = denominacionesBs.map(d => `
+                <div><label class="text-xs text-gray-600 font-semibold">${d} Bs</label>
+                <input type="number" min="0" step="1" value="0" data-val="${d}" oninput="calcularTotalBsEfectivo()" class="w-full p-1 border rounded text-center denom-bs outline-none"></div>`).join('');
+        }
+        function sumarDenoms(sel) {
+            let t = 0;
+            document.querySelectorAll(sel).forEach(i => t += Math.max(0, num(i.value)) * num(i.dataset.val));
+            return t;
+        }
+        function calcularTotalDivisas() { const t = sumarDenoms('.denom-usd'); $('sum-divisas').innerText = fmt(t) + ' $'; return t; }
+        function calcularTotalBsEfectivo() { const t = sumarDenoms('.denom-bs'); $('sum-bs-efectivo').innerText = fmt(t) + ' Bs'; return t; }
+        function addTransferRow() {
+            transferRowsCount++;
+            const rowId = `transf-row-${transferRowsCount}`;
+            $('transfers-list').insertAdjacentHTML('beforeend', `
+                <div id="${rowId}" class="flex gap-2 items-center">
+                    <input type="text" placeholder="Nombre de quien transfiere" class="flex-1 p-2 border rounded text-sm outline-none transf-name">
+                    <input type="text" placeholder="N° Referencia" class="w-32 p-2 border rounded text-sm outline-none transf-ref">
+                    <input type="number" min="0" step="0.01" placeholder="Monto Bs" oninput="calcularTotalBsTransf()" class="w-28 p-2 border rounded text-sm outline-none transf-monto">
+                    <button type="button" onclick="document.getElementById('${rowId}').remove(); calcularTotalBsTransf();" class="text-red-600 font-bold px-2 cursor-pointer">✕</button>
+                </div>`);
+        }
+        function calcularTotalBsTransf() {
+            let t = 0;
+            document.querySelectorAll('.transf-monto').forEach(i => t += Math.max(0, num(i.value)));
+            $('sum-bs-transf').innerText = fmt(t) + ' Bs';
+            return t;
+        }
+        function toggleIngresoFields() {
+            const type = $('ing-type').value;
+            $('container-diezmo').classList.toggle('hidden', type !== 'Diezmo');
+            $('container-especial').classList.toggle('hidden', type !== 'Ofrenda especial');
+        }
+
+        /* ---------- Responsables ---------- */
+        function actualizarSelectsResponsables() {
+            document.querySelectorAll('.resp-select').forEach(sel => {
+                const actual = sel.value;
+                sel.innerHTML = '';
+                sel.add(new Option('Seleccione responsable...', ''));
+                responsables.forEach(r => sel.add(new Option(r.nombre, r.nombre)));
+                sel.value = responsables.some(r => r.nombre === actual) ? actual : '';
+            });
+        }
+        async function agregarResponsable() {
+            const input = $('nuevo-resp-nombre');
+            const n = input.value.trim();
+            if (!n) return;
+            if (responsables.some(r => r.nombre.toLowerCase() === n.toLowerCase())) { alert('Ese responsable ya existe.'); return; }
+            try {
+                requiereDB();
+                await window.FB.addDoc(window.FB.collection(window.db, 'responsables'), { nombre: n, createdAt: new Date().toISOString() });
+                input.value = '';
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+        async function eliminarResponsable(r) {
+            requiereDB();
+            await window.FB.deleteDoc(window.FB.doc(window.db, 'responsables', r.id));
+            alert('Responsable eliminado.');
+        }
+        function renderResponsablesList() {
+            const cont = $('responsables-list');
+            cont.innerHTML = '';
+            if (!responsables.length) {
+                cont.innerHTML = '<p class="text-xs text-gray-500 italic">No hay responsables registrados.</p>';
+                return;
+            }
+            responsables.forEach(r => {
+                const fila = document.createElement('div');
+                fila.className = 'flex justify-between items-center p-2 bg-gray-50 border rounded-lg text-sm';
+                const nombre = document.createElement('span'); nombre.textContent = r.nombre;
+                const btn = document.createElement('button');
+                btn.className = 'text-red-600 underline font-bold text-xs cursor-pointer';
+                btn.textContent = 'Eliminar con Clave';
+                btn.addEventListener('click', () => solicitarClaveParaAccion(() => eliminarResponsable(r)));
+                fila.append(nombre, btn);
+                cont.appendChild(fila);
+            });
+        }
+
+        /* ---------- Cambiaria ---------- */
+        function calcularTasaImplicita() {
+            const d = $('cam-debit-account').value, c = $('cam-credit-account').value;
+            const dA = num($('cam-debit-amount').value), cA = num($('cam-credit-amount').value);
+            const bs = a => a.startsWith('bs');
+            let tasa = 0;
+            if (d === 'usd' && bs(c) && dA > 0) tasa = cA / dA;
+            else if (bs(d) && c === 'usd' && cA > 0) tasa = dA / cA;
+            $('tasa-implicita').innerText = fmt(tasa) + ' Bs/$';
+        }
+
+        /* ---------- Transacciones ---------- */
+        const correlativo = pref => `${pref}-${hoy().replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+        async function guardarMovimiento(data) {
+            if (guardando) return false;
+            guardando = true;
+            try {
+                requiereDB();
+                await window.FB.addDoc(window.FB.collection(window.db, 'movements'), data);
+                return true;
+            } catch (e) {
+                alert('No se pudo guardar: ' + e.message);
+                return false;
+            } finally { guardando = false; }
+        }
+
+        async function totalizarIngreso() {
+            const usd = calcularTotalDivisas(), bsE = calcularTotalBsEfectivo(), bsT = calcularTotalBsTransf();
+            const resp = $('ing-responsible').value, tipo = $('ing-type').value;
+            if (!resp) { alert('Seleccione un responsable.'); return; }
+            if (usd + bsE + bsT <= 0) { alert('El ingreso está en cero.'); return; }
+            if (tipo === 'Diezmo' && !$('ing-giver').value.trim()) { alert('Indique el nombre de quien da el diezmo.'); return; }
+
+            const data = {
+                type: 'income', correlative: correlativo('ING'),
+                date: $('ing-date').value, category: tipo,
+                giver: $('ing-giver').value.trim(), detail: $('ing-detail').value.trim(),
+                usd, bs_efectivo: bsE, bs_transf: bsT,
+                responsible: resp, verifiedBy: $('ing-verified').value.trim() || 'Ninguno',
+                createdAt: new Date().toISOString()
+            };
+            if (!(await guardarMovimiento(data))) return;
+            generarRecibo(data);
+            resetIngreso();
+            alert('¡Ingreso guardado y recibo generado!');
+        }
+        function resetIngreso() {
+            $('form-ingreso').reset();
+            $('ing-date').value = hoy();
+            toggleIngresoFields();
+            poblarDenominaciones();
+            $('transfers-list').innerHTML = '';
+            addTransferRow();
+            calcularTotalDivisas(); calcularTotalBsEfectivo(); calcularTotalBsTransf();
+        }
+
+        async function totalizarEgreso() {
+            const resp = $('eg-responsible').value;
+            if (!resp) { alert('Seleccione responsable.'); return; }
+            const usd = num($('eg-usd').value), bsE = num($('eg-bs-efec').value), bsT = num($('eg-bs-transf').value);
+            if (usd + bsE + bsT <= 0) { alert('Registre al menos un monto mayor a cero.'); return; }
+            const data = {
+                type: 'expense', correlative: correlativo('EGR'),
+                date: $('eg-date').value, category: $('eg-type').value, detail: $('eg-desc').value.trim(),
+                usd, bs_efectivo: bsE, bs_transf: bsT, reference: $('eg-ref').value.trim(),
+                responsible: resp, authorizedBy: $('eg-auth').value.trim() || 'N/A',
+                beneficiary: $('eg-beneficiary').value.trim() || 'N/A',
+                createdAt: new Date().toISOString()
+            };
+            if (!(await guardarMovimiento(data))) return;
+            generarRecibo(data);
+            $('form-egreso').reset(); $('eg-date').value = hoy();
+            alert('¡Egreso registrado y comprobante generado!');
+        }
+
+        async function registrarCambio() {
+            const resp = $('cam-responsible').value;
+            if (!resp) { alert('Seleccione responsable.'); return; }
+            const dA = num($('cam-debit-amount').value), cA = num($('cam-credit-amount').value);
+            const dAcc = $('cam-debit-account').value, cAcc = $('cam-credit-account').value;
+            if (dAcc === cAcc) { alert('Las cuentas deben ser distintas.'); return; }
+            if (dA <= 0 || cA <= 0) { alert('Los montos deben ser mayores a cero.'); return; }
+            const data = {
+                type: 'exchange', correlative: correlativo('CAM'),
+                date: $('cam-date').value, category: 'Operación cambiaria',
+                detail: $('cam-comment').value.trim() || 'Compra / Venta de divisas',
+                debitAccount: dAcc, debitAmount: dA, creditAccount: cAcc, creditAmount: cA,
+                responsible: resp, createdAt: new Date().toISOString()
+            };
+            if (!(await guardarMovimiento(data))) return;
+            generarRecibo(data);
+            $('form-cambio').reset(); $('cam-date').value = hoy();
+            calcularTasaImplicita();
+            alert('¡Operación cambiaria ejecutada y recibo generado!');
+        }
+
+        /* ---------- Recibos PNG (iniciales VN) ---------- */
+        function generarRecibo(item) {
+            const cont = $('recibo-preview-container');
+            const ex = item.type === 'exchange';
+            const titulo = item.type === 'income' ? 'RECEPCIÓN DE OFRENDAS' : item.type === 'expense' ? 'COMPROBANTE DE EGRESO' : 'COMPROBANTE DE OPERACIÓN CAMBIARIA';
+            const fila = (a, b, st = '') => `<tr style="border-bottom:1px solid #ddd"><td style="padding:8px;${st}">${a}</td><td style="padding:8px;text-align:right;font-weight:bold">${b}</td></tr>`;
+            const filas = ex
+                ? fila('SE DEBITA (SALE): ' + esc(CUENTAS[item.debitAccount]), fmt(item.debitAmount), 'color:#E31B23;font-weight:bold')
+                  + fila('SE ACREDITA (ENTRA): ' + esc(CUENTAS[item.creditAccount]), fmt(item.creditAmount), 'color:#004B87;font-weight:bold')
+                : fila('Divisas Efectivo ($)', fmt(item.usd) + ' $') + fila('Bolívares Efectivo (Bs)', fmt(item.bs_efectivo) + ' Bs') + fila('Bolívares Transferencia (Bs)', fmt(item.bs_transf) + ' Bs');
+            
+            cont.innerHTML = `
+                <div id="recibo-canvas" style="width:600px;padding:30px;background:#fff;font-family:sans-serif;color:#333;border:4px solid #004B87;">
+                    <div style="display:flex;align-items:center;border-bottom:2px solid #E31B23;padding-bottom:15px;margin-bottom:20px;">
+                        <div style="width:45px;height:45px;background:#004B87;color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:18px;margin-right:15px;">VN</div>
+                        <div style="flex:1;text-align:center;">
+                            <h2 style="margin:0;color:#E31B23;font-size:22px;font-weight:900;">VIDA NUEVA</h2>
+                            <p style="margin:2px 0;color:#004B87;font-size:11px;font-weight:bold;text-transform:uppercase;">Iglesia Cristiana — Tesorería</p>
+                            <h3 style="margin:5px 0 0;color:#333;font-size:15px;">${titulo}</h3>
+                        </div>
+                    </div>
+                    <div style="font-size:13px;margin-bottom:15px;display:flex;justify-content:space-between;">
+                        <div><strong>N°:</strong> ${esc(item.correlative)}</div><div><strong>Fecha:</strong> ${esc(item.date)}</div>
+                    </div>
+                    <div style="font-size:13px;margin-bottom:15px;"><strong>Concepto:</strong> ${esc(item.category)} - ${esc(item.detail || item.giver || '')}</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:15px;">
+                        <thead><tr style="background:#004B87;color:#fff;"><th style="padding:8px;text-align:left;">Detalle</th><th style="padding:8px;text-align:right;">Monto</th></tr></thead>
+                        <tbody>${filas}</tbody>
+                    </table>
+                    <div style="font-size:12px;margin-top:25px;display:flex;justify-content:space-between;">
+                        <div>Responsable: <strong>${esc(item.responsible)}</strong></div><div>Emisión: ${new Date().toLocaleDateString('es-VE')}</div>
+                    </div>
+                </div>`;
+            html2canvas($('recibo-canvas'), { scale: 2, backgroundColor: '#ffffff' })
+                .then(canvas => {
+                    const a = document.createElement('a');
+                    a.download = `Recibo_${item.correlative}.png`;
+                    a.href = canvas.toDataURL('image/png');
+                    a.click();
+                })
+                .catch(e => { console.error(e); alert('Guardado, pero falló la imagen del recibo.'); })
+                .finally(() => { cont.innerHTML = ''; });
+        }
+
+        /* ---------- Histórico y Saldos ---------- */
+        function renderHistoricoYBalos() {
+            const tbody = $('movements-table-body');
+            if (!tbody) return;
+            const saldo = { usd: 0, bs_efectivo: 0, bs_transf: 0 };
+            let html = '';
+
+            movimientosGlobales.forEach(m => {
+                let montoTxt = '';
+                if (m.type === 'income') {
+                    saldo.usd += num(m.usd); saldo.bs_efectivo += num(m.bs_efectivo); saldo.bs_transf += num(m.bs_transf);
+                } else if (m.type === 'expense') {
+                    saldo.usd -= num(m.usd); saldo.bs_efectivo -= num(m.bs_efectivo); saldo.bs_transf -= num(m.bs_transf);
+                } else if (m.type === 'exchange') {
+                    if (m.debitAccount in saldo) saldo[m.debitAccount] -= num(m.debitAmount);
+                    if (m.creditAccount in saldo) saldo[m.creditAccount] += num(m.creditAmount);
+                }
+                if (m.type === 'exchange') {
+                    montoTxt = `${fmt(m.debitAmount)} ${esc(CUENTAS[m.debitAccount] || m.debitAccount)} ➔ ${fmt(m.creditAmount)} ${esc(CUENTAS[m.creditAccount] || m.creditAccount)}`;
+                } else {
+                    montoTxt = [m.usd ? fmt(m.usd) + ' $' : '', m.bs_efectivo ? fmt(m.bs_efectivo) + ' Bs' : '', m.bs_transf ? fmt(m.bs_transf) + ' Bs (Tr)' : ''].filter(Boolean).join(' · ');
+                }
+                const color = m.type === 'income' ? 'text-green-600' : m.type === 'expense' ? 'text-red-600' : 'text-blue-600';
+                const signo = m.type === 'income' ? '+' : m.type === 'expense' ? '-' : '⇄';
+                html += `
+                    <tr class="border-b hover:bg-gray-50 text-xs">
+                        <td class="p-2">${esc(m.date)}<br><span class="font-bold text-[#004B87]">${esc(m.correlative || 'MOV')}</span></td>
+                        <td class="p-2"><strong>${esc(m.category)}</strong><br>${esc(m.detail || m.giver || '')}</td>
+                        <td class="p-2">${esc(m.responsible)}</td>
+                        <td class="p-2 text-right font-bold ${color}">${signo} ${montoTxt}</td>
+                        <td class="p-2 text-center space-y-1">
+                            <button data-print="${esc(m.id)}" class="block mx-auto text-blue-700 underline font-bold cursor-pointer">Recibo</button>
+                            <button data-del="${esc(m.id)}" class="block mx-auto text-red-600 underline font-bold cursor-pointer">Eliminar con Clave</button>
+                        </td>
+                    </tr>`;
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">No hay movimientos registrados.</td></tr>';
+            $('saldo-usd').innerText = fmt(saldo.usd) + ' $';
+            $('saldo-bs-efec').innerText = fmt(saldo.bs_efectivo) + ' Bs';
+            $('saldo-bs-transf').innerText = fmt(saldo.bs_transf) + ' Bs';
+        }
+
+        async function eliminarMovimiento(id) {
+            const m = movimientosGlobales.find(x => x.id === id);
+            if (!m) return;
+            requiereDB();
+            const { id: _omit, ...datos } = m;
+            await window.FB.setDoc(window.FB.doc(window.db, 'movements_eliminados', id), { ...datos, eliminadoEn: new Date().toISOString() });
+            await window.FB.deleteDoc(window.FB.doc(window.db, 'movements', id));
+            alert('Movimiento eliminado y saldos actualizados.');
+        }
+
+        async function refrescarHistorico() {
+            try {
+                requiereDB();
+                const snap = await window.FB.getDocs(window.FB.collection(window.db, 'movements'));
+                movimientosGlobales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                ordenar();
+                renderHistoricoYBalos();
+                alert('Histórico actualizado.');
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        /* ---------- Reiniciar Fábrica ---------- */
+        function descargarRespaldo() {
+            const blob = new Blob([JSON.stringify({ fecha: new Date().toISOString(), movimientos: movimientosGlobales, responsables }, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
-            a.download = `Recibo_${item.correlative}.png`;
-            a.href = canvas.toDataURL('image/png');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Respaldo_VN_${hoy()}.json`;
             a.click();
-        })
-        .catch(e => { console.error(e); alert('El movimiento se guardó, pero no se pudo generar la imagen del recibo.'); })
-        .finally(() => { cont.innerHTML = ''; });
-}
-
-/* ---------- Histórico y saldos ---------- */
-function renderHistoricoYBalos() {
-    const tbody = $('movements-table-body');
-    if (!tbody) return;
-    const saldo = { usd: 0, bs_efectivo: 0, bs_transf: 0 };
-    let html = '';
-
-    movimientosGlobales.forEach(m => {
-        let montoTxt = '';
-        if (m.type === 'income') {
-            saldo.usd += num(m.usd); saldo.bs_efectivo += num(m.bs_efectivo); saldo.bs_transf += num(m.bs_transf);
-        } else if (m.type === 'expense') {
-            saldo.usd -= num(m.usd); saldo.bs_efectivo -= num(m.bs_efectivo); saldo.bs_transf -= num(m.bs_transf);
-        } else if (m.type === 'exchange') {
-            if (m.debitAccount in saldo) saldo[m.debitAccount] -= num(m.debitAmount);
-            if (m.creditAccount in saldo) saldo[m.creditAccount] += num(m.creditAmount);
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         }
-        if (m.type === 'exchange') {
-            montoTxt = `${fmt(m.debitAmount)} ${esc(CUENTAS[m.debitAccount] || m.debitAccount)} ➔ ${fmt(m.creditAmount)} ${esc(CUENTAS[m.creditAccount] || m.creditAccount)}`;
-        } else {
-            montoTxt = [m.usd ? fmt(m.usd) + ' $' : '', m.bs_efectivo ? fmt(m.bs_efectivo) + ' Bs' : '', m.bs_transf ? fmt(m.bs_transf) + ' Bs (Tr)' : ''].filter(Boolean).join(' · ');
+        async function borrarColeccion(nombre) {
+            const snap = await window.FB.getDocs(window.FB.collection(window.db, nombre));
+            for (let i = 0; i < snap.docs.length; i += 400) {
+                const batch = window.FB.writeBatch(window.db);
+                snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+                await batch.commit();
+            }
         }
-        const color = m.type === 'income' ? 'text-green-600' : m.type === 'expense' ? 'text-red-600' : 'text-blue-600';
-        const signo = m.type === 'income' ? '+' : m.type === 'expense' ? '-' : '⇄';
-        html += `
-            <tr class="border-b hover:bg-gray-50 text-xs">
-                <td class="p-2">${esc(m.date)}<br><span class="font-bold text-[#004B87]">${esc(m.correlative || 'MOV')}</span></td>
-                <td class="p-2"><strong>${esc(m.category)}</strong><br>${esc(m.detail || m.giver || '')}</td>
-                <td class="p-2">${esc(m.responsible)}</td>
-                <td class="p-2 text-right font-bold ${color}">${signo} ${montoTxt}</td>
-                <td class="p-2 text-center space-y-1">
-                    <button data-print="${esc(m.id)}" class="block mx-auto text-blue-700 underline font-bold cursor-pointer">Recibo</button>
-                    <button data-del="${esc(m.id)}" class="block mx-auto text-red-600 underline font-bold cursor-pointer">Eliminar con Clave</button>
-                </td>
-            </tr>`;
-    });
-
-    tbody.innerHTML = html || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">No hay movimientos registrados.</td></tr>';
-    $('saldo-usd').innerText = fmt(saldo.usd) + ' $';
-    $('saldo-bs-efec').innerText = fmt(saldo.bs_efectivo) + ' Bs';
-    $('saldo-bs-transf').innerText = fmt(saldo.bs_transf) + ' Bs';
-}
-
-// Eliminación: guarda copia en "movements_eliminados" (auditoría) y luego borra
-async function eliminarMovimiento(id) {
-    const m = movimientosGlobales.find(x => x.id === id);
-    if (!m) { alert('El movimiento ya no existe.'); return; }
-    if (!confirm(`¿Eliminar el movimiento ${m.correlative || ''} (${m.category}, ${m.date})?\nEsta acción actualiza los saldos.`)) return;
-    requiereDB();
-    const { id: _omit, ...datos } = m;
-    await window.FB.setDoc(window.FB.doc(window.db, 'movements_eliminados', id), { ...datos, eliminadoEn: new Date().toISOString() });
-    await window.FB.deleteDoc(window.FB.doc(window.db, 'movements', id));
-    alert('Movimiento eliminado y saldos actualizados.');
-}
-
-// Botón "Actualizar": ahora vuelve a leer desde la nube y avisa
-async function refrescarHistorico() {
-    const btn = $('view-historico').querySelector('h2 button');
-    const txt = btn ? btn.textContent : '';
-    if (btn) { btn.disabled = true; btn.textContent = 'Actualizando...'; }
-    try {
-        requiereDB();
-        const snap = await window.FB.getDocs(window.FB.collection(window.db, 'movements'));
-        movimientosGlobales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        ordenar();
-        renderHistoricoYBalos();
-    } catch (e) { alert('No se pudo actualizar: ' + e.message); }
-    finally { if (btn) { btn.disabled = false; btn.textContent = txt; } }
-}
-
-/* ---------- Reiniciar fábrica ---------- */
-function descargarRespaldo() {
-    const blob = new Blob([JSON.stringify({ fecha: new Date().toISOString(), movimientos: movimientosGlobales, responsables }, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `Respaldo_VN_${hoy()}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-}
-async function borrarColeccion(nombre) {
-    const snap = await window.FB.getDocs(window.FB.collection(window.db, nombre));
-    for (let i = 0; i < snap.docs.length; i += 400) {
-        const batch = window.FB.writeBatch(window.db);
-        snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
-        await batch.commit();
-    }
-}
-async function ejecutarReiniciarFabrica() {
-    requiereDB();
-    if (!confirm('Se borrarán TODOS los movimientos y responsables. Antes se descargará un respaldo (.json). ¿Continuar?')) return;
-    descargarRespaldo();
-    await borrarColeccion('movements');
-    await borrarColeccion('responsables');
-    localStorage.removeItem('vn_responsables');
-    alert('Sistema reiniciado: sin movimientos y sin responsables. Se descargó un respaldo.');
-}
-
-/* ---------- PDF mensual ---------- */
-function filasModalidad(movs, campo) {
-    const filas = []; let ent = 0, sal = 0;
-    movs.forEach(m => {
-        let e = 0, s = 0;
-        if (m.type === 'income') e = num(m[campo]);
-        else if (m.type === 'expense') s = num(m[campo]);
-        else if (m.type === 'exchange') {
-            if (m.debitAccount === campo) s = num(m.debitAmount);
-            if (m.creditAccount === campo) e = num(m.creditAmount);
+        async function ejecutarReiniciarFabrica() {
+            requiereDB();
+            descargarRespaldo();
+            await borrarColeccion('movements');
+            await borrarColeccion('responsables');
+            alert('Sistema reiniciado a cero. Se descargó un respaldo JSON.');
         }
-        if (e || s) {
-            ent += e; sal += s;
-            filas.push([m.date, m.correlative || '', m.category + (m.detail ? ' - ' + m.detail : ''), e ? fmt(e) : '-', s ? fmt(s) : '-']);
+
+        /* ---------- Reporte PDF ---------- */
+        function filasModalidad(movs, campo) {
+            const filas = []; let ent = 0, sal = 0;
+            movs.forEach(m => {
+                let e = 0, s = 0;
+                if (m.type === 'income') e = num(m[campo]);
+                else if (m.type === 'expense') s = num(m[campo]);
+                else if (m.type === 'exchange') {
+                    if (m.debitAccount === campo) s = num(m.debitAmount);
+                    if (m.creditAccount === campo) e = num(m.creditAmount);
+                }
+                if (e || s) {
+                    ent += e; sal += s;
+                    filas.push([m.date, m.correlative || '', m.category + (m.detail ? ' - ' + m.detail : ''), e ? fmt(e) : '-', s ? fmt(s) : '-']);
+                }
+            });
+            if (!filas.length) return [['-', '-', 'Sin movimientos', '-', '-']];
+            filas.push(['', '', 'TOTALES (saldo del mes: ' + fmt(ent - sal) + ')', fmt(ent), fmt(sal)]);
+            return filas;
         }
-    });
-    if (!filas.length) return [['-', '-', 'Sin movimientos', '-', '-']];
-    filas.push(['', '', 'TOTALES (saldo del mes: ' + fmt(ent - sal) + ')', fmt(ent), fmt(sal)]);
-    return filas;
-}
-function generarPDFReporte() {
-    const mes = $('report-month').value;
-    if (!mes) { alert('Seleccione un mes.'); return; }
-    if (!(window.jspdf && window.jspdf.jsPDF)) { alert('No cargó la librería de PDF. Revise su conexión.'); return; }
-    const movs = movimientosGlobales.filter(m => m.date && m.date.startsWith(mes))
-        .sort((a, b) => a.date.localeCompare(b.date) || (a.createdAt || '').localeCompare(b.createdAt || ''));
-    const doc = new window.jspdf.jsPDF();
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
-    doc.text('IGLESIA CRISTIANA VIDA NUEVA', 14, 17);
-    doc.setFontSize(10); doc.setTextColor(100);
-    doc.text(`Reporte Mensual de Tesorería (${mes}) - Desglose por Modalidad`, 14, 23);
-    doc.setTextColor(0);
+        function generarPDFReporte() {
+            const mes = $('report-month').value;
+            if (!mes) { alert('Seleccione un mes.'); return; }
+            if (!(window.jspdf && window.jspdf.jsPDF)) { alert('Librería PDF no disponible.'); return; }
+            const movs = movimientosGlobales.filter(m => m.date && m.date.startsWith(mes))
+                .sort((a, b) => a.date.localeCompare(b.date) || (a.createdAt || '').localeCompare(b.createdAt || ''));
+            const doc = new window.jspdf.jsPDF();
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+            doc.text('IGLESIA CRISTIANA VIDA NUEVA', 14, 17);
+            doc.setFontSize(10); doc.setTextColor(100);
+            doc.text(`Reporte Mensual de Tesorería (${mes}) - Desglose por Modalidad`, 14, 23);
+            doc.setTextColor(0);
 
-    const secciones = [
-        ['1. Movimientos en Bolívares Efectivo ( Bs )', 'bs_efectivo', 'Bs'],
-        ['2. Movimientos en Transferencias Bancarias ( Bs )', 'bs_transf', 'Bs'],
-        ['3. Movimientos en Divisas Efectivo ( $ )', 'usd', '$']
-    ];
-    let y = 35;
-    secciones.forEach(([titulo, campo, u]) => {
-        if (y > 250) { doc.addPage(); y = 20; }
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-        doc.text(titulo, 14, y);
-        doc.autoTable({
-            startY: y + 3,
-            head: [['Fecha', 'Recibo', 'Concepto', `Entrada (${u})`, `Salida (${u})`]],
-            body: filasModalidad(movs, campo), theme: 'grid',
-            styles: { fontSize: 8 }, headStyles: { fillColor: [0, 75, 135] },
-            columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } }
-        });
-        y = doc.lastAutoTable.finalY + 10;
-    });
-    doc.save(`Reporte_Tesoreria_${mes}.pdf`);
-}
+            const secciones = [
+                ['1. Movimientos en Bolívares Efectivo ( Bs )', 'bs_efectivo', 'Bs'],
+                ['2. Movimientos en Transferencias Bancarias ( Bs )', 'bs_transf', 'Bs'],
+                ['3. Movimientos en Divisas Efectivo ( $ )', 'usd', '$']
+            ];
+            let y = 35;
+            secciones.forEach(([titulo, campo, u]) => {
+                if (y > 250) { doc.addPage(); y = 20; }
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+                doc.text(titulo, 14, y);
+                doc.autoTable({
+                    startY: y + 3,
+                    head: [['Fecha', 'Recibo', 'Concepto', `Entrada (${u})`, `Salida (${u})`]],
+                    body: filasModalidad(movs, campo), theme: 'grid',
+                    styles: { fontSize: 8 }, headStyles: { fillColor: [0, 75, 135] },
+                    columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } }
+                });
+                y = doc.lastAutoTable.finalY + 10;
+            });
+            doc.save(`Reporte_Tesoreria_${mes}.pdf`);
+        }
 
-/* ---------- Arranque ---------- */
-function iniciarApp() {
-    ['ing-date', 'eg-date', 'cam-date'].forEach(id => $(id).value = hoy());
-    $('report-month').value = hoy().substring(0, 7);
-    poblarDenominaciones();
-    renderResponsablesList();
-    addTransferRow();
-    initClave();
+        /* ---------- Inicialización ---------- */
+        function iniciarApp() {
+            ['ing-date', 'eg-date', 'cam-date'].forEach(id => $(id).value = hoy());
+            $('report-month').value = hoy().substring(0, 7);
+            poblarDenominaciones();
+            renderResponsablesList();
+            addTransferRow();
+            initClave();
 
-    // El botón Actualizar ahora recarga desde la nube
-    const btnAct = $('view-historico').querySelector('h2 button');
-    if (btnAct) { btnAct.removeAttribute('onclick'); btnAct.addEventListener('click', refrescarHistorico); }
+            const btnAct = $('view-historico').querySelector('h2 button');
+            if (btnAct) { btnAct.removeAttribute('onclick'); btnAct.addEventListener('click', refrescarHistorico); }
 
-    // Acciones del histórico (delegación de eventos: sin comillas rotas en el HTML)
-    $('movements-table-body').addEventListener('click', e => {
-        const del = e.target.closest('[data-del]');
-        const prt = e.target.closest('[data-print]');
-        if (del) solicitarClaveParaAccion(() => eliminarMovimiento(del.dataset.del));
-        if (prt) { const m = movimientosGlobales.find(x => x.id === prt.dataset.print); if (m) generarRecibo(m); }
-    });
+            $('movements-table-body').addEventListener('click', e => {
+                const del = e.target.closest('[data-del]');
+                const prt = e.target.closest('[data-print]');
+                if (del) solicitarClaveParaAccion(() => eliminarMovimiento(del.dataset.del));
+                if (prt) { const m = movimientosGlobales.find(x => x.id === prt.dataset.print); if (m) generarRecibo(m); }
+            });
 
-    // Enter / Escape en el modal de clave
-    $('modal-password-input').addEventListener('keydown', e => {
-        if (e.key === 'Enter') ejecutarAccionProtegida();
-        if (e.key === 'Escape') cerrarModalClave();
-    });
+            $('modal-password-input').addEventListener('keydown', e => {
+                if (e.key === 'Enter') ejecutarAccionProtegida();
+                if (e.key === 'Escape') cerrarModalClave();
+            });
 
-    if (window.FB && window.db) iniciarFirestore();
-    else window.addEventListener('firebase-ready', iniciarFirestore, { once: true });
+            if (window.FB && window.db) iniciarFirestore();
+            else window.addEventListener('firebase-ready', iniciarFirestore, { once: true });
 
-    // Si Firebase no carga, no dejar la pantalla de carga atascada
-    setTimeout(() => {
-        const l = $('loading-screen');
-        if (l && l.style.display !== 'none') { setEstado(false, 'Sin conexión con la nube'); ocultarLoader(); }
-    }, 10000);
-}
-iniciarApp();
-</script>
+            setTimeout(() => {
+                const l = $('loading-screen');
+                if (l && l.style.display !== 'none') { setEstado(false, 'Sin conexión con la nube'); ocultarLoader(); }
+            }, 8000);
+        }
+        iniciarApp();
+    </script>
 </body>
 </html>
