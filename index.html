@@ -44,7 +44,7 @@
 
     <!-- HEADER -->
     <header class="bg-white shadow-md border-b-4 border-[#E31B23] sticky top-0 z-50">
-        <div class="max-w-4xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center">
             <div class="flex items-center space-x-3">
                 <div class="bg-[#004B87] text-white font-black px-3 py-1 rounded-lg text-xl tracking-wider">VN</div>
                 <div>
@@ -59,7 +59,7 @@
         </div>
         <!-- MENÚ -->
         <nav class="bg-[#004B87] text-white shadow-inner overflow-x-auto">
-            <div class="max-w-4xl mx-auto flex whitespace-nowrap px-2">
+            <div class="max-w-5xl mx-auto flex whitespace-nowrap px-2">
                 <button onclick="switchTab('ingresos')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-yellow-400 bg-blue-900 transition flex items-center space-x-1" data-target="ingresos">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i> <span>Ingresos</span>
                 </button>
@@ -80,6 +80,9 @@
                 </button>
                 <button onclick="switchTab('ajustes')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1" data-target="ajustes">
                     <i data-lucide="settings" class="w-4 h-4"></i> <span>Ajustes</span>
+                </button>
+                <button onclick="switchTab('reiniciar')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-red-800 transition flex items-center space-x-1 text-red-200" data-target="reiniciar">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span>Reiniciar Fábrica</span>
                 </button>
             </div>
         </nav>
@@ -364,12 +367,12 @@
         <section id="view-reportes" class="hidden space-y-6">
             <div class="bg-white p-6 rounded-xl shadow-md border text-center space-y-4">
                 <h2 class="text-lg font-bold text-[#004B87]">Generación de Reportes Mensuales en PDF</h2>
-                <p class="text-sm text-gray-600">Seleccione el mes para generar el reporte oficial con tablas separadas por modalidad y firmas.</p>
+                <p class="text-sm text-gray-600">Seleccione el mes para generar el reporte oficial con el emblema de la iglesia, tablas separadas por modalidad y firmas.</p>
                 <div class="flex flex-col sm:flex-row justify-center gap-4 max-w-lg mx-auto">
                     <input type="month" id="report-month" class="p-2 border rounded-lg outline-none">
                     <button onclick="generarPDFReporte()" class="bg-[#E31B23] text-white font-bold px-6 py-2 rounded-lg hover:bg-red-700 transition flex items-center justify-center space-x-2">
                         <i data-lucide="download" class="w-4 h-4"></i>
-                        <span>Generar PDF Oficial Separado</span>
+                        <span>Generar PDF Oficial con Emblema</span>
                     </button>
                 </div>
             </div>
@@ -402,13 +405,29 @@
             </div>
         </section>
 
+        <!-- PESTAÑA 8: REINICIAR FÁBRICA -->
+        <section id="view-reiniciar" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border border-red-200 text-center space-y-4">
+                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <h2 class="text-lg font-bold text-red-700">Restaurar Configuración de Fábrica</h2>
+                <p class="text-sm text-gray-600 max-w-md mx-auto">Esta acción eliminará <strong>todos los registros del histórico</strong> de la base de datos y dejará la lista de responsables <strong>completamente en blanco</strong>. Requiere Clave Maestra.</p>
+                <div class="pt-2">
+                    <button onclick="solicitarClaveParaAccion(() => ejecutarReiniciarFabrica())" class="bg-red-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-red-700 transition">
+                        REINICIAR SISTEMA A CERO
+                    </button>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- MODAL DE CLAVE MAESTRA -->
     <div id="modal-clave" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4 text-center">
             <h3 class="font-bold text-lg text-[#004B87]">Se requiere Clave Maestra</h3>
-            <p class="text-xs text-gray-600">Ingrese la clave para confirmar esta acción.</p>
+            <p class="text-xs text-gray-600">Ingrese la clave para confirmar esta acción protegida.</p>
             <input type="password" id="modal-password-input" placeholder="Clave Maestra" class="w-full p-2 border rounded-lg text-center outline-none">
             <div class="flex space-x-2">
                 <button onclick="cerrarModalClave()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-bold">Cancelar</button>
@@ -420,13 +439,16 @@
     <!-- CONTENEDOR OCULTO RECIBO PNG -->
     <div id="recibo-preview-container" class="absolute -top-[9999px] left-0"></div>
 
+    <!-- IMAGEN OCULTA DEL LOGO PARA INCRUSTAR EN EL PDF -->
+    <img id="logo-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" class="hidden" crossorigin="anonymous" />
+
     <script>
         lucide.createIcons();
 
-        let responsablesList = ["Hermano Pastor", "Hna. María Pérez", "Diác. Carlos Gómez"];
+        let responsablesList = JSON.parse(localStorage.getItem('vn_responsables')) || ["Hermano Pastor", "Hna. María Pérez", "Diác. Carlos Gómez"];
         let denominacionesUsd = [1, 2, 5, 10, 20, 50, 100];
         let denominacionesBs = [1, 5, 10, 20, 50, 100, 200, 500];
-        let masterPassword = "VidaNueva";
+        let masterPassword = localStorage.getItem('vn_master_pass') || "VidaNueva";
         let transferRowsCount = 0;
         let callbackAccionProtegida = null;
         let movimientosGlobales = [];
@@ -464,10 +486,10 @@
             document.getElementById(`view-${tabId}`).classList.remove('hidden');
             
             document.querySelectorAll('nav button').forEach(btn => {
-                btn.classList.remove('border-yellow-400', 'bg-blue-900');
+                btn.classList.remove('border-yellow-400', 'bg-blue-900', 'bg-red-800');
                 btn.classList.add('border-transparent');
             });
-            document.querySelector(`[data-target="${tabId}"]`).classList.add('border-yellow-400', 'bg-blue-900');
+            document.querySelector(`[data-target="${tabId}"]`).classList.add('border-yellow-400', tabId === 'reiniciar' ? 'bg-red-800' : 'bg-blue-900');
             if(tabId === 'historico') renderHistoricoYBalos();
         }
 
@@ -559,6 +581,7 @@
             const input = document.getElementById('nuevo-resp-nombre');
             if(input.value.trim()) {
                 responsablesList.push(input.value.trim());
+                localStorage.setItem('vn_responsables', JSON.stringify(responsablesList));
                 input.value = '';
                 actualizarSelectsResponsables();
                 renderResponsablesList();
@@ -568,11 +591,15 @@
         function renderResponsablesList() {
             const container = document.getElementById('responsables-list');
             container.innerHTML = '';
+            if(responsablesList.length === 0) {
+                container.innerHTML = `<p class="text-xs text-gray-500 italic">No hay responsables registrados (Versión de fábrica en blanco).</p>`;
+                return;
+            }
             responsablesList.forEach((r, idx) => {
                 container.innerHTML += `
                     <div class="flex justify-between items-center p-2 bg-gray-50 border rounded-lg text-sm">
                         <span>${r}</span>
-                        <button onclick="solicitarClaveParaAccion(() => { responsablesList.splice(${idx},1); actualizarSelectsResponsables(); renderResponsablesList(); })" class="text-red-600 underline font-bold text-xs cursor-pointer">Eliminar</button>
+                        <button onclick="solicitarClaveParaAccion(() => { responsablesList.splice(${idx},1); localStorage.setItem('vn_responsables', JSON.stringify(responsablesList)); actualizarSelectsResponsables(); renderResponsablesList(); })" class="text-red-600 underline font-bold text-xs cursor-pointer">Eliminar con Clave</button>
                     </div>
                 `;
             });
@@ -624,8 +651,29 @@
             const nueva = document.getElementById('nueva-clave-maestra').value;
             if(nueva.trim()) {
                 masterPassword = nueva.trim();
+                localStorage.setItem('vn_master_pass', masterPassword);
                 alert('Clave maestra actualizada con éxito.');
                 document.getElementById('nueva-clave-maestra').value = '';
+            }
+        }
+
+        // REINICIAR FÁBRICA (ELIMINAR TODO EL HISTÓRICO Y RESPONSABLES)
+        async function ejecutarReiniciarFabrica() {
+            try {
+                if(window.db && window.FB) {
+                    const snapshot = await window.FB.getDocs(window.FB.collection(window.db, "movements"));
+                    const promesasBorrado = snapshot.docs.map(d => window.FB.deleteDoc(d.ref));
+                    await Promise.all(promesasBorrado);
+                }
+                responsablesList = [];
+                localStorage.setItem('vn_responsables', JSON.stringify([]));
+                actualizarSelectsResponsables();
+                renderResponsablesList();
+                renderHistoricoYBalos();
+                alert('¡Sistema reiniciado a configuración de fábrica! Histórico borrado y responsables en blanco.');
+            } catch(e) {
+                console.error(e);
+                alert('Error al reiniciar fábrica: ' + e.message);
             }
         }
 
@@ -848,7 +896,7 @@
             });
         }
 
-        // HISTÓRICO Y SALDOS (AFECTA AUTOMÁTICAMENTE AL ELIMINAR)
+        // HISTÓRICO Y SALDOS
         function renderHistoricoYBalos() {
             let saldoUsd = 0;
             let saldoBsEfec = 0;
@@ -895,7 +943,7 @@
                             ${signo} ${montoTexto}
                         </td>
                         <td class="p-2 text-center">
-                            <button onclick="solicitarClaveParaAccion(async () => { await window.FB.deleteDoc(window.FB.doc(window.db, 'movements', '${item.id}')); alert('Movimiento eliminado y saldos actualizados.'); })" class="text-red-600 underline font-bold cursor-pointer">Eliminar</button>
+                            <button onclick="solicitarClaveParaAccion(async () => { await window.FB.deleteDoc(window.FB.doc(window.db, 'movements', '${item.id}')); alert('Eliminado del histórico y saldos recalculados.'); })" class="text-red-600 underline font-bold cursor-pointer">Eliminar con Clave</button>
                         </td>
                     </tr>
                 `;
@@ -906,22 +954,33 @@
             document.getElementById('saldo-bs-transf').innerText = saldoBsTransf.toLocaleString('es-VE', {minimumFractionDigits: 2}) + ' Bs';
         }
 
-        // PDF OFICIAL
+        // PDF OFICIAL CON EMBLEMA
         function generarPDFReporte() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
+            
+            // Agregar Logo / Emblema
+            const logoImg = document.getElementById('logo-img');
+            if(logoImg && logoImg.src) {
+                try {
+                    doc.addImage(logoImg, 'PNG', 14, 10, 18, 18);
+                } catch(e) { console.log('Logo no cargado en PDF', e); }
+            }
+
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
-            doc.text("IGLESIA CRISTIANA VIDA NUEVA", 105, 15, { align: "center" });
+            doc.text("IGLESIA CRISTIANA VIDA NUEVA", 40, 17);
             doc.setFontSize(10);
-            doc.text("Reporte Mensual de Tesorería - Desglose por Modalidad", 105, 22, { align: "center" });
+            doc.setTextColor(100);
+            doc.text("Reporte Mensual de Tesorería - Desglose por Modalidad", 40, 23);
+            doc.setTextColor(0);
 
             const mesSel = document.getElementById('report-month').value;
             const movsMes = movimientosGlobales.filter(m => m.date && m.date.startsWith(mesSel));
 
-            doc.text("1. Movimientos en Bolívares Efectivo ( Bs )", 14, 32);
+            doc.text("1. Movimientos en Bolívares Efectivo ( Bs )", 14, 35);
             const dataBsEfec = movsMes.map(m => [m.date, m.correlative || '', m.category, m.type === 'income' ? (m.bs_efectivo || 0) : 0, m.type === 'expense' ? (m.bs_efectivo || 0) : 0]);
-            doc.autoTable({ startY: 35, head: [['Fecha', 'Recibo', 'Concepto', 'Entrada (Bs)', 'Salida (Bs)']], body: dataBsEfec.length ? dataBsEfec : [['-', '-', 'Sin movimientos', '-', '-']], theme: 'grid' });
+            doc.autoTable({ startY: 38, head: [['Fecha', 'Recibo', 'Concepto', 'Entrada (Bs)', 'Salida (Bs)']], body: dataBsEfec.length ? dataBsEfec : [['-', '-', 'Sin movimientos', '-', '-']], theme: 'grid' });
 
             let finalY = doc.lastAutoTable.finalY + 10;
             doc.text("2. Movimientos en Transferencias Bancarias ( Bs )", 14, finalY);
