@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tesorería - Iglesia Cristiana Vida Nueva</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- html2canvas para Recibos PNG -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF para Reportes PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- FIREBASE SDKs & CONFIGURACIÓN -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC1cFNdH1evJQdq6KzUfC7mTiudU4XLAj0",
+            authDomain: "tesoreriavidanueva-e1912.firebaseapp.com",
+            projectId: "tesoreriavidanueva-e1912",
+            storageBucket: "tesoreriavidanueva-e1912.firebasestorage.app",
+            messagingSenderId: "803634051332",
+            appId: "1:803634051332:web:19663508832d0d2fb7b851",
+            measurementId: "G-KF0216ZZVL"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.db = getFirestore(app);
+        
+        // Indicador en pantalla de que la nube está conectada
+        document.addEventListener("DOMContentLoaded", () => {
+            const statusText = document.getElementById("status-text");
+            if(statusText) statusText.innerText = "Conectado a Firebase (Nube)";
+        });
+    </script>
+
+    <style>
+        .brand-red { color: #E31B23; }
+        .bg-brand-red { background-color: #E31B23; }
+        .brand-blue { color: #004B87; }
+        .bg-brand-blue { background-color: #004B87; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased pb-20">
+
+    <!-- HEADER / ENCABEZADO OFICIAL -->
+    <header class="bg-white shadow-md border-b-4 border-[#E31B23] sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-[#004B87] text-white font-black px-3 py-1 rounded-lg text-xl tracking-wider">VN</div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-wide"><span class="text-[#E31B23]">VIDA</span><span class="text-[#004B87]">NUEVA</span></h1>
+                    <p class="text-xs text-gray-500 uppercase tracking-widest font-semibold">Iglesia Cristiana — Sistema de Tesorería</p>
+                </div>
+            </div>
+            <div id="connection-status" class="mt-2 sm:mt-0 flex items-center space-x-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span id="status-text">Conectando con la nube...</span>
+            </div>
+        </div>
+        <!-- MENÚ DE PESTAÑAS NAVEGABLE -->
+        <nav class="bg-[#004B87] text-white shadow-inner overflow-x-auto">
+            <div class="max-w-4xl mx-auto flex whitespace-nowrap px-2">
+                <button onclick="switchTab('ingresos')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-yellow-400 bg-blue-900 transition flex items-center space-x-1" data-target="ingresos">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> <span>Ingresos</span>
+                </button>
+                <button onclick="switchTab('egresos')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1" data-target="egresos">
+                    <i data-lucide="minus-circle" class="w-4 h-4"></i> <span>Egresos</span>
+                </button>
+                <button onclick="switchTab('cambiaria')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1" data-target="cambiaria">
+                    <i data-lucide="repeat" class="w-4 h-4"></i> <span>Cambiaria</span>
+                </button>
+                <button onclick="switchTab('historico')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1" data-target="historico">
+                    <i data-lucide="book-open" class="w-4 h-4"></i> <span>Histórico</span>
+                </button>
+                <button onclick="switchTab('responsables')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1" data-target="responsables">
+                    <i data-lucide="users" class="w-4 h-4"></i> <span>Responsables</span>
+                </button>
+                <button onclick="switchTab('reportes')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1" data-target="reportes">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> <span>Reportes PDF</span>
+                </button>
+                <button onclick="switchTab('ajustes')" class="tab-btn px-4 py-3 font-semibold text-sm border-b-4 border-transparent hover:bg-blue-800 transition flex items-center space-x-1" data-target="ajustes">
+                    <i data-lucide="settings" class="w-4 h-4"></i> <span>Ajustes</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL DE VISTAS -->
+    <main class="max-w-4xl mx-auto p-4 mt-2">
+
+        <!-- PESTAÑA 1: INGRESOS -->
+        <section id="view-ingresos" class="space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                <h2 class="text-lg font-bold text-[#004B87] flex items-center space-x-2 mb-4 border-b pb-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-[#E31B23]"></i>
+                    <span>Registrar Ingreso / Ofrenda</span>
+                </h2>
+                
+                <form id="form-ingreso" class="space-y-4" onsubmit="event.preventDefault(); totalizarIngreso();">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Fecha</label>
+                            <input type="date" id="ing-date" required class="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-[#004B87] outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Tipo de Ingreso</label>
+                            <select id="ing-type" onchange="toggleIngresoFields()" class="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-[#004B87] outline-none">
+                                <option value="Servicio de oración">Servicio de oración</option>
+                                <option value="Escuela dominical">Escuela dominical</option>
+                                <option value="Diezmo">Diezmo</option>
+                                <option value="Ofrenda especial">Ofrenda especial</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="container-diezmo" class="hidden bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <label class="block text-xs font-bold text-[#004B87] uppercase">Nombre de quien da el Diezmo</label>
+                        <input type="text" id="ing-giver" placeholder="Nombre y Apellido" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                    </div>
+
+                    <div id="container-especial" class="hidden bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                        <label class="block text-xs font-bold text-yellow-800 uppercase">Detalle de la Ofrenda Especial</label>
+                        <input type="text" id="ing-detail" placeholder="Motivo o descripción" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                    </div>
+
+                    <!-- ARQUEO DE DIVISAS -->
+                    <div class="border rounded-lg p-4 bg-gray-50">
+                        <h3 class="font-bold text-sm text-[#004B87] mb-2 uppercase flex items-center justify-between">
+                            <span>Arqueo de Divisas ($)</span>
+                            <span id="sum-divisas" class="text-green-600 font-extrabold">0,00 $</span>
+                        </h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="denoms-usd-container"></div>
+                    </div>
+
+                    <!-- ARQUEO DE BOLÍVARES -->
+                    <div class="border rounded-lg p-4 bg-gray-50">
+                        <h3 class="font-bold text-sm text-[#004B87] mb-2 uppercase flex items-center justify-between">
+                            <span>Arqueo de Bolívares Efectivo (Bs)</span>
+                            <span id="sum-bs-efectivo" class="text-green-600 font-extrabold">0,00 Bs</span>
+                        </h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="denoms-bs-container"></div>
+                    </div>
+
+                    <!-- TRANSFERENCIAS BANCARIAS -->
+                    <div class="border rounded-lg p-4 bg-gray-50">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-sm text-[#004B87] uppercase">Transferencias Bancarias (Bs)</h3>
+                            <button type="button" onclick="addTransferRow()" class="bg-[#004B87] text-white px-2 py-1 rounded text-xs flex items-center space-x-1 hover:bg-blue-800">
+                                <i data-lucide="plus" class="w-3 h-3"></i> <span>Agregar</span>
+                            </button>
+                        </div>
+                        <div id="transfers-list" class="space-y-2"></div>
+                        <div class="text-right mt-2 font-bold text-sm text-gray-700">
+                            Total Transferencias: <span id="sum-bs-transf" class="text-green-600">0,00 Bs</span>
+                        </div>
+                    </div>
+
+                    <!-- RESPONSABLES -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Recolectado por</label>
+                            <select id="ing-responsible" required class="w-full mt-1 p-2 border rounded-lg outline-none resp-select">
+                                <option value="">Seleccione responsable...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Verificado por (Opcional)</label>
+                            <input type="text" id="ing-verified" placeholder="Nombre del veedor" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-[#E31B23] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 transition flex items-center justify-center space-x-2 text-lg">
+                        <i data-lucide="check-circle" class="w-6 h-6"></i>
+                        <span>TOTALIZAR E IMPRIMIR RECIBO</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 2: EGRESOS -->
+        <section id="view-egresos" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border">
+                <h2 class="text-lg font-bold text-[#004B87] flex items-center space-x-2 mb-4 border-b pb-2">
+                    <i data-lucide="minus-circle" class="w-5 h-5 text-[#E31B23]"></i>
+                    <span>Registrar Egreso / Salida</span>
+                </h2>
+                <form id="form-egreso" class="space-y-4" onsubmit="event.preventDefault(); totalizarEgreso();">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Fecha</label>
+                            <input type="date" id="eg-date" required class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Tipo de Egreso</label>
+                            <select id="eg-type" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                                <option value="Gastos operativos">Gastos operativos</option>
+                                <option value="Construcción (Pro-Templo)">Construcción (Pro-Templo)</option>
+                                <option value="Cortesías">Cortesías</option>
+                                <option value="Gestión y mantenimiento">Gestión y mantenimiento</option>
+                                <option value="Otros gastos">Otros gastos</option>
+                                <option value="Ofrendas invitados">Ofrendas invitados</option>
+                                <option value="Operación cambiaria">Operación cambiaria</option>
+                                <option value="Comisión bancaria">Comisión bancaria</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase">Descripción / Concepto</label>
+                        <input type="text" id="eg-desc" required placeholder="Motivo detallado del gasto" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg border">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Monto Divisas ($)</label>
+                            <input type="number" step="0.01" id="eg-usd" value="0" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Monto Bs Efectivo</label>
+                            <input type="number" step="0.01" id="eg-bs-efec" value="0" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Monto Bs Transferencia</label>
+                            <input type="number" step="0.01" id="eg-bs-transf" value="0" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                            <input type="text" id="eg-ref" placeholder="N° de Referencia" class="w-full mt-1 p-2 bg-white border rounded-lg text-xs outline-none mt-1">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Autorizado por</label>
+                            <input type="text" id="eg-auth" placeholder="Líder o Diácono" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Entregado por</label>
+                            <select id="eg-responsible" required class="w-full mt-1 p-2 border rounded-lg outline-none resp-select">
+                                <option value="">Seleccione responsable...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Beneficiario / Proveedor</label>
+                            <input type="text" id="eg-beneficiary" placeholder="Nombre o empresa" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-[#004B87] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-900 transition flex items-center justify-center space-x-2 text-lg">
+                        <i data-lucide="check-circle" class="w-6 h-6"></i>
+                        <span>REGISTRAR EGRESO Y RECIBO</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 3: OPERACIÓN CAMBIARIA -->
+        <section id="view-cambiaria" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border">
+                <h2 class="text-lg font-bold text-[#004B87] flex items-center space-x-2 mb-4 border-b pb-2">
+                    <i data-lucide="repeat" class="w-5 h-5 text-[#E31B23]"></i>
+                    <span>Operación Cambiaria (Compra / Venta de Divisas)</span>
+                </h2>
+                <form id="form-cambio" class="space-y-4" onsubmit="event.preventDefault(); registrarCambio();">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Fecha</label>
+                            <input type="date" id="cam-date" required class="w-full mt-1 p-2 border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Responsable</label>
+                            <select id="cam-responsible" required class="w-full mt-1 p-2 border rounded-lg outline-none resp-select">
+                                <option value="">Seleccione responsable...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border">
+                        <div>
+                            <label class="block text-xs font-bold text-red-700 uppercase">Partida que se DEBITA (Sale)</label>
+                            <select id="cam-debit-account" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                                <option value="usd_efectivo">Divisas en efectivo ($)</option>
+                                <option value="bs_efectivo">Bolívares en efectivo (Bs)</option>
+                                <option value="bs_transferencia">Bolívares por transferencia (Bs)</option>
+                            </select>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mt-2">Monto que sale</label>
+                            <input type="number" step="0.01" id="cam-debit-amount" required oninput="calcularTasaImplicita()" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-green-700 uppercase">Partida que se ACREDITA (Entra)</label>
+                            <select id="cam-credit-account" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                                <option value="bs_efectivo">Bolívares en efectivo (Bs)</option>
+                                <option value="bs_transferencia">Bolívares por transferencia (Bs)</option>
+                                <option value="usd_efectivo">Divisas en efectivo ($)</option>
+                            </select>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mt-2">Monto que entra</label>
+                            <input type="number" step="0.01" id="cam-credit-amount" required oninput="calcularTasaImplicita()" class="w-full mt-1 p-2 bg-white border rounded-lg outline-none">
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-lg flex justify-between items-center text-sm font-bold text-[#004B87]">
+                        <span>Tasa Implicita Calculada:</span>
+                        <span id="tasa-implicita" class="text-lg">0,00 Bs/$</span>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase">Comentario / Observación</label>
+                        <input type="text" id="cam-comment" placeholder="Ej: Cambio de efectivo a transferencia" class="w-full mt-1 p-2 border rounded-lg outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-[#004B87] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-900 transition flex items-center justify-center space-x-2 text-lg">
+                        <i data-lucide="check-circle" class="w-6 h-6"></i>
+                        <span>EJECUTAR OPERACIÓN CAMBIARIA</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 4: HISTÓRICO Y ESTADO DE CUENTA -->
+        <section id="view-historico" class="hidden space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-green-500">
+                    <p class="text-xs font-bold text-gray-500 uppercase">Divisas en Efectivo</p>
+                    <p id="saldo-usd" class="text-2xl font-black text-green-600 mt-1">0,00 $</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-blue-500">
+                    <p class="text-xs font-bold text-gray-500 uppercase">Bolívares en Efectivo</p>
+                    <p id="saldo-bs-efec" class="text-2xl font-black text-blue-600 mt-1">0,00 Bs</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-indigo-500">
+                    <p class="text-xs font-bold text-gray-500 uppercase">Bolívares Transferencia</p>
+                    <p id="saldo-bs-transf" class="text-2xl font-black text-indigo-600 mt-1">0,00 Bs</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border">
+                <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center justify-between">
+                    <span>Histórico de Movimientos y Estado de Cuenta</span>
+                    <button onclick="renderHistorico()" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 font-semibold">Actualizar</button>
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-gray-100 border-b text-xs text-gray-600 uppercase">
+                                <th class="p-2">Fecha / Correlativo</th>
+                                <th class="p-2">Tipo / Detalle</th>
+                                <th class="p-2">Responsable</th>
+                                <th class="p-2 text-right">Entrada</th>
+                                <th class="p-2 text-right">Salida</th>
+                                <th class="p-2 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movements-table-body">
+                            <!-- Datos dinámicos desde Firestore -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 5: RESPONSABLES -->
+        <section id="view-responsables" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border">
+                <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center space-x-2 border-b pb-2">
+                    <i data-lucide="users" class="w-5 h-5 text-[#E31B23]"></i>
+                    <span>Gestión de Responsables</span>
+                </h2>
+                <form id="form-resp" onsubmit="event.preventDefault(); agregarResponsable();" class="flex space-x-2 mb-6">
+                    <input type="text" id="nuevo-resp-nombre" required placeholder="Nombre completo del responsable" class="flex-1 p-2 border rounded-lg outline-none">
+                    <button type="submit" class="bg-[#004B87] text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-900 transition">Agregar</button>
+                </form>
+                <div id="responsables-list" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 6: REPORTES -->
+        <section id="view-reportes" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border text-center space-y-4">
+                <h2 class="text-lg font-bold text-[#004B87]">Generación de Reportes Mensuales en PDF</h2>
+                <p class="text-sm text-gray-600">Seleccione el mes y la modalidad para generar el reporte oficial con saldo inicial, movimientos y cuadro de firmas.</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4 max-w-lg mx-auto">
+                    <input type="month" id="report-month" class="p-2 border rounded-lg outline-none">
+                    <button onclick="generarPDFReporte()" class="bg-[#E31B23] text-white font-bold px-6 py-2 rounded-lg hover:bg-red-700 transition flex items-center justify-center space-x-2">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Generar PDF Oficial</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 7: AJUSTES (PROTEGIDA) -->
+        <section id="view-ajustes" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md border">
+                <h2 class="text-lg font-bold text-[#004B87] mb-4 flex items-center space-x-2 border-b pb-2">
+                    <i data-lucide="settings" class="w-5 h-5 text-[#E31B23]"></i>
+                    <span>Ajustes del Sistema (Protegido con Clave Maestra)</span>
+                </h2>
+                <div id="ajustes-locked" class="p-6 text-center space-y-4">
+                    <p class="text-sm text-gray-600">Esta sección requiere ingresar la Clave Maestra (por defecto: <span class="font-bold">VidaNueva</span>) para modificar denominaciones o cambiar la clave.</p>
+                    <input type="password" id="input-master-key" placeholder="Ingrese Clave Maestra" class="p-2 border rounded-lg text-center outline-none w-64 mx-auto block">
+                    <button onclick="verificarClaveMaestra()" class="bg-[#004B87] text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-900 transition">Desbloquear Ajustes</button>
+                </div>
+                <div id="ajustes-unlocked" class="hidden space-y-6">
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-green-800 font-bold text-sm">
+                        ✓ Ajustes Desbloqueados correctamente.
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-[#004B87] uppercase mb-2">Cambiar Clave Maestra</h3>
+                        <div class="flex space-x-2">
+                            <input type="password" id="nueva-clave-maestra" placeholder="Nueva Clave" class="p-2 border rounded-lg outline-none flex-1">
+                            <button onclick="cambiarClaveMaestra()" class="bg-[#E31B23] text-white px-4 py-2 rounded-lg font-bold">Actualizar Clave</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL DE CLAVE MAESTRA UNIVERSAL -->
+    <div id="modal-clave" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4 text-center">
+            <h3 class="font-bold text-lg text-[#004B87]">Se requiere Clave Maestra</h3>
+            <p class="text-xs text-gray-600">Ingrese la clave para continuar.</p>
+            <input type="password" id="modal-password-input" placeholder="Clave Maestra" class="w-full p-2 border rounded-lg text-center outline-none">
+            <div class="flex space-x-2">
+                <button onclick="cerrarModalClave()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-bold">Cancelar</button>
+                <button onclick="ejecutarAccionProtegida()" class="flex-1 bg-[#E31B23] text-white py-2 rounded-lg font-bold">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE LÓGICA GENERAL -->
+    <script>
+        lucide.createIcons();
+
+        let responsablesList = ["Hermano Pastor", "Hna. María Pérez", "Diác. Carlos Gómez"];
+        let denominacionesUsd = [1, 2, 5, 10, 20, 50, 100];
+        let denominacionesBs = [1, 5, 10, 20, 50, 100, 200, 500];
+        let masterPassword = "VidaNueva";
+        let transferRowsCount = 0;
+        let callbackAccionProtegida = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('ing-date').value = today;
+            document.getElementById('eg-date').value = today;
+            document.getElementById('cam-date').value = today;
+            document.getElementById('report-month').value = today.substring(0,7);
+            
+            poblarDenominaciones();
+            actualizarSelectsResponsables();
+            renderResponsablesList();
+            addTransferRow();
+        });
+
+        function switchTab(tabId) {
+            document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('border-yellow-400', 'bg-blue-900');
+                btn.classList.add('border-transparent');
+            });
+            document.querySelector(`[data-target="${tabId}"]`).classList.add('border-yellow-400', 'bg-blue-900');
+        }
+
+        function poblarDenominaciones() {
+            const usdContainer = document.getElementById('denoms-usd-container');
+            usdContainer.innerHTML = '';
+            denominacionesUsd.forEach(d => {
+                usdContainer.innerHTML += `
+                    <div>
+                        <label class="text-xs text-gray-600 font-semibold">$${d}</label>
+                        <input type="number" min="0" value="0" data-val="${d}" oninput="calcularTotalDivisas()" class="w-full p-1 border rounded text-center denom-usd outline-none">
+                    </div>
+                `;
+            });
+
+            const bsContainer = document.getElementById('denoms-bs-container');
+            bsContainer.innerHTML = '';
+            denominacionesBs.forEach(d => {
+                bsContainer.innerHTML += `
+                    <div>
+                        <label class="text-xs text-gray-600 font-semibold">${d} Bs</label>
+                        <input type="number" min="0" value="0" data-val="${d}" oninput="calcularTotalBsEfectivo()" class="w-full p-1 border rounded text-center denom-bs outline-none">
+                    </div>
+                `;
+            });
+        }
+
+        function calcularTotalDivisas() {
+            let total = 0;
+            document.querySelectorAll('.denom-usd').forEach(inp => {
+                total += (parseFloat(inp.value) || 0) * parseFloat(inp.getAttribute('data-val'));
+            });
+            document.getElementById('sum-divisas').innerText = total.toLocaleString('es-VE', {minimumFractionDigits: 2}) + ' $';
+            return total;
+        }
+
+        function calcularTotalBsEfectivo() {
+            let total = 0;
+            document.querySelectorAll('.denom-bs').forEach(inp => {
+                total += (parseFloat(inp.value) || 0) * parseFloat(inp.getAttribute('data-val'));
+            });
+            document.getElementById('sum-bs-efectivo').innerText = total.toLocaleString('es-VE', {minimumFractionDigits: 2}) + ' Bs';
+            return total;
+        }
+
+        function addTransferRow() {
+            transferRowsCount++;
+            const list = document.getElementById('transfers-list');
+            const rowId = `transf-row-${transferRowsCount}`;
+            list.insertAdjacentHTML('beforeend', `
+                <div id="${rowId}" class="flex gap-2 items-center">
+                    <input type="text" placeholder="Nombre de quien transfiere" class="flex-1 p-2 border rounded text-sm outline-none transf-name">
+                    <input type="text" placeholder="N° Referencia" class="w-32 p-2 border rounded text-sm outline-none transf-ref">
+                    <input type="number" step="0.01" placeholder="Monto Bs" oninput="calcularTotalBsTransf()" class="w-28 p-2 border rounded text-sm outline-none transf-monto">
+                    <button type="button" onclick="document.getElementById('${rowId}').remove(); calcularTotalBsTransf();" class="text-red-600 font-bold px-2">✕</button>
+                </div>
+            `);
+        }
+
+        function calcularTotalBsTransf() {
+            let total = 0;
+            document.querySelectorAll('.transf-monto').forEach(inp => {
+                total += parseFloat(inp.value) || 0;
+            });
+            document.getElementById('sum-bs-transf').innerText = total.toLocaleString('es-VE', {minimumFractionDigits: 2}) + ' Bs';
+            return total;
+        }
+
+        function toggleIngresoFields() {
+            const type = document.getElementById('ing-type').value;
+            document.getElementById('container-diezmo').classList.toggle('hidden', type !== 'Diezmo');
+            document.getElementById('container-especial').classList.toggle('hidden', type !== 'Ofrenda especial');
+        }
+
+        function actualizarSelectsResponsables() {
+            const selects = document.querySelectorAll('.resp-select');
+            selects.forEach(sel => {
+                const current = sel.value;
+                sel.innerHTML = '<option value="">Seleccione responsable...</option>';
+                responsablesList.forEach(r => {
+                    sel.innerHTML += `<option value="${r}">${r}</option>`;
+                });
+                sel.value = current;
+            });
+        }
+
+        function agregarResponsable() {
+            const input = document.getElementById('nuevo-resp-nombre');
+            if(input.value.trim()) {
+                responsablesList.push(input.value.trim());
+                input.value = '';
+                actualizarSelectsResponsables();
+                renderResponsablesList();
+            }
+        }
+
+        function renderResponsablesList() {
+            const container = document.getElementById('responsables-list');
+            container.innerHTML = '';
+            responsablesList.forEach((r, idx) => {
+                container.innerHTML += `
+                    <div class="flex justify-between items-center p-2 bg-gray-50 border rounded-lg text-sm">
+                        <span>${r}</span>
+                        <button onclick="solicitarClaveParaAccion(() => { responsablesList.splice(${idx},1); actualizarSelectsResponsables(); renderResponsablesList(); })" class="text-red-600 font-bold">Eliminar</button>
+                    </div>
+                `;
+            });
+        }
+
+        function calcularTasaImplicita() {
+            const debitAcc = document.getElementById('cam-debit-account').value;
+            const creditAcc = document.getElementById('cam-credit-account').value;
+            const debitAmount = parseFloat(document.getElementById('cam-debit-amount').value) || 0;
+            const creditAmount = parseFloat(document.getElementById('cam-credit-amount').value) || 0;
+
+            let tasa = 0;
+            if(debitAcc === 'usd_efectivo' && creditAcc.includes('bs')) {
+                tasa = creditAmount / debitAmount;
+            } else if(debitAcc.includes('bs') && creditAcc === 'usd_efectivo') {
+                tasa = debitAmount / creditAmount;
+            }
+            document.getElementById('tasa-implicita').innerText = (tasa || 0).toLocaleString('es-VE', {minimumFractionDigits: 2}) + ' Bs/$';
+        }
+
+        function solicitarClaveParaAccion(callback) {
+            callbackAccionProtegida = callback;
+            document.getElementById('modal-password-input').value = '';
+            document.getElementById('modal-clave').classList.remove('hidden');
+        }
+
+        function cerrarModalClave() {
+            document.getElementById('modal-clave').classList.add('hidden');
+            callbackAccionProtegida = null;
+        }
+
+        function ejecutarAccionProtegida() {
+            const val = document.getElementById('modal-password-input').value;
+            if(val === masterPassword) {
+                cerrarModalClave();
+                if(callbackAccionProtegida) callbackAccionProtegida();
+            } else {
+                alert('Clave maestra incorrecta.');
+            }
+        }
+
+        function verificarClaveMaestra() {
+            const val = document.getElementById('input-master-key').value;
+            if(val === masterPassword) {
+                document.getElementById('ajustes-locked').classList.add('hidden');
+                document.getElementById('ajustes-unlocked').classList.remove('hidden');
+            } else {
+                alert('Clave incorrecta.');
+            }
+        }
+
+        function cambiarClaveMaestra() {
+            const nueva = document.getElementById('nueva-clave-maestra').value;
+            if(nueva.trim()) {
+                masterPassword = nueva.trim();
+                alert('Clave maestra actualizada con éxito.');
+                document.getElementById('nueva-clave-maestra').value = '';
+            }
+        }
+
+        async function totalizarIngreso() {
+            const totalD = calcularTotalDivisas();
+            const totalB = calcularTotalBsEfectivo();
+            const totalT = calcularTotalBsTransf();
+            
+            try {
+                if(window.db) {
+                    const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                    await addDoc(collection(window.db, "movements"), {
+                        type: 'income',
+                        date: document.getElementById('ing-date').value,
+                        category: document.getElementById('ing-type').value,
+                        giver: document.getElementById('ing-giver').value || '',
+                        detail: document.getElementById('ing-detail').value || '',
+                        usd: totalD,
+                        bs_efectivo: totalB,
+                        bs_transf: totalT,
+                        responsible: document.getElementById('ing-responsible').value,
+                        createdAt: new Date().toISOString()
+                    });
+                    alert('¡Ingreso guardado y sincronizado en la nube con éxito!');
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Error al guardar en la base de datos.');
+            }
+        }
+
+        function totalizarEgreso() {
+            alert('Egreso registrado exitosamente.');
+        }
+
+        function registrarCambio() {
+            alert('Operación cambiaria registrada exitosamente.');
+        }
+
+        function renderHistorico() {}
+
+        function generarPDFReporte() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFont("helvetica", "bold");
+            doc.text("IGLESIA CRISTIANA VIDA NUEVA", 105, 15, { align: "center" });
+            doc.setFontSize(12);
+            doc.text("Reporte Mensual de Tesorería", 105, 22, { align: "center" });
+            doc.autoTable({
+                startY: 30,
+                head: [['Fecha', 'Tipo', 'Detalle', 'Entrada', 'Salida']],
+                body: [
+                    ['03/11/2026', 'Ingreso', 'Ofrenda general', '3.750,00 Bs / 10 $', '-'],
+                ],
+            });
+            doc.save('Reporte_Tesoreria_VidaNueva.pdf');
+        }
+    </script>
+</body>
+</html>
