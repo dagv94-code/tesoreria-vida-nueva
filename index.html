@@ -33,7 +33,6 @@
         window.db = getFirestore(app);
         window.FB = { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, onSnapshot, query, orderBy, writeBatch };
 
-        // Notificar que Firebase está listo
         window.dispatchEvent(new Event('firebase-ready'));
     </script>
 </head>
